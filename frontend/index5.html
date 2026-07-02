@@ -1,0 +1,2579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BloodConnect — Bengaluru</title>
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Cabinet+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+/* ── DESIGN TOKENS ──────────────────────────────────────────── */
+:root {
+  --red:       #E8363D;
+  --red-dk:    #B52028;
+  --red-glow:  rgba(232,54,61,0.25);
+  --red-lt:    rgba(232,54,61,0.1);
+  --navy:      #080F1E;
+  --navy2:     #0D1729;
+  --navy3:     #121F38;
+  --card:      #0F1C30;
+  --card2:     #152240;
+  --card3:     #1A2B50;
+  --line:      rgba(255,255,255,0.06);
+  --line2:     rgba(255,255,255,0.1);
+  --text:      #EDF2FA;
+  --muted:     #6B7FA3;
+  --muted2:    #8A9DC0;
+  --green:     #00D68F;
+  --green-lt:  rgba(0,214,143,0.12);
+  --yellow:    #F5C842;
+  --yellow-lt: rgba(245,200,66,0.12);
+  --blue:      #4F8EF7;
+  --blue-lt:   rgba(79,142,247,0.12);
+  --purple:    #A855F7;
+  --purple-lt: rgba(168,85,247,0.12);
+  --r:         12px;
+  --r2:        18px;
+  --font:      'Clash Display', sans-serif;
+  --body:      'Cabinet Grotesk', sans-serif;
+  --sidebar-w: 240px;
+  --shadow:    0 4px 24px rgba(0,0,0,0.4);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow-x: hidden; }
+body {
+  font-family: var(--body);
+  background: var(--navy);
+  color: var(--text);
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── SCROLLBAR ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--card3); border-radius: 99px; }
+
+/* ── SIDEBAR ────────────────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--navy2);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 200;
+  overflow-y: auto;
+}
+.logo {
+  padding: 26px 20px 22px;
+  border-bottom: 1px solid var(--line);
+}
+.logo-mark { display: flex; align-items: center; gap: 12px; }
+.logo-icon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--red), var(--red-dk));
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 0 20px var(--red-glow);
+}
+.logo-text { font-family: var(--font); font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
+.logo-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; letter-spacing: .02em; }
+
+.nav { padding: 18px 12px; flex: 1; }
+.nav-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: .12em;
+  color: var(--muted); text-transform: uppercase;
+  padding: 0 10px; margin: 14px 0 6px;
+}
+.nav-btn {
+  display: flex; align-items: center; gap: 11px;
+  width: 100%; padding: 10px 12px;
+  border: none; background: none; color: var(--muted2);
+  font-family: var(--body); font-size: 13.5px; font-weight: 500;
+  border-radius: 10px; cursor: pointer; text-align: left;
+  transition: all .18s;
+  margin-bottom: 2px;
+  position: relative;
+}
+.nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.nav-btn:hover { background: rgba(255,255,255,.05); color: var(--text); }
+.nav-btn.active {
+  background: var(--red-lt);
+  color: #FF7A7F;
+  font-weight: 600;
+}
+.nav-btn.active::before {
+  content: '';
+  position: absolute; left: 0; top: 20%; bottom: 20%;
+  width: 3px; border-radius: 99px;
+  background: var(--red);
+}
+.nav-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: white;
+  font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 99px;
+  min-width: 20px; text-align: center;
+}
+
+.sidebar-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--line);
+}
+.api-status {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11.5px; color: var(--muted);
+}
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: .4; }
+}
+
+/* ── MAIN ───────────────────────────────────────────────────── */
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  min-height: 100vh;
+  min-width: 0;
+  max-width: calc(100vw - var(--sidebar-w));
+  overflow-x: hidden;
+}
+
+/* ── TOP BAR ────────────────────────────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(8,15,30,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  padding: 14px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%;
+}
+.page-title { font-family: var(--font); font-size: 22px; font-weight: 600; letter-spacing: -.3px; }
+.page-title span { color: var(--red); }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.chip {
+  background: var(--card); border: 1px solid var(--line2);
+  border-radius: 99px; padding: 6px 14px;
+  font-size: 12px; color: var(--muted2);
+  display: flex; align-items: center; gap: 6px;
+}
+.chip strong { color: var(--text); font-weight: 600; }
+.btn-refresh {
+  background: var(--card2); border: 1px solid var(--line2);
+  color: var(--text); border-radius: 10px; padding: 8px 16px;
+  font-size: 13px; cursor: pointer; font-family: var(--body);
+  transition: all .18s; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-refresh:hover { background: var(--card3); border-color: var(--red); color: var(--red); }
+
+/* ── PAGE CONTENT ───────────────────────────────────────────── */
+.page-content { padding: 24px 28px 48px; width: 100%; overflow-x: hidden; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── STAT CARDS ─────────────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0,1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+  transition: transform .2s, box-shadow .2s;
+  cursor: default;
+}
+.stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.stat-card::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  opacity: 0; transition: opacity .2s;
+}
+.stat-card:hover::after { opacity: 1; }
+.stat-card.c-red   { border-top: 2px solid var(--red); }
+.stat-card.c-red::after   { background: var(--red); box-shadow: 0 0 20px var(--red); }
+.stat-card.c-green { border-top: 2px solid var(--green); }
+.stat-card.c-green::after { background: var(--green); }
+.stat-card.c-yellow{ border-top: 2px solid var(--yellow); }
+.stat-card.c-yellow::after{ background: var(--yellow); }
+.stat-card.c-blue  { border-top: 2px solid var(--blue); }
+.stat-card.c-blue::after  { background: var(--blue); }
+.stat-card.c-purple{ border-top: 2px solid var(--purple); }
+.stat-card.c-purple::after{ background: var(--purple); }
+
+.stat-icon-wrap {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; margin-bottom: 14px;
+}
+.c-red   .stat-icon-wrap { background: var(--red-lt); }
+.c-green .stat-icon-wrap { background: var(--green-lt); }
+.c-yellow.stat-icon-wrap, .c-yellow .stat-icon-wrap { background: var(--yellow-lt); }
+.c-blue  .stat-icon-wrap { background: var(--blue-lt); }
+.c-purple.stat-icon-wrap, .c-purple .stat-icon-wrap { background: var(--purple-lt); }
+.stat-label { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+.stat-val { font-family: var(--font); font-size: 30px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+.stat-sub { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+/* ── CARDS ──────────────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r2);
+  padding: 22px 24px;
+}
+.card-title {
+  font-family: var(--font); font-size: 15px; font-weight: 600;
+  letter-spacing: -.2px; margin-bottom: 3px;
+}
+.card-sub { font-size: 12px; color: var(--muted); margin-bottom: 18px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; }
+
+/* ── GRIDS ──────────────────────────────────────────────────── */
+.g2  { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); gap: 18px; margin-bottom: 18px; }
+.g2e { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 18px; margin-bottom: 18px; }
+.g3  { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; margin-bottom: 18px; }
+.mb  { margin-bottom: 18px; }
+
+/* ── TABLE ──────────────────────────────────────────────────── */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); padding: 8px 12px; text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.data-table td { padding: 12px 12px; border-bottom: 1px solid rgba(255,255,255,.03); font-size: 13px; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tbody tr:hover td { background: rgba(255,255,255,.02); }
+.table-wrap { overflow-x: auto; width: 100%; }
+.table-wrap .data-table { min-width: 620px; }
+
+/* ── BLOOD TYPE BADGES ──────────────────────────────────────── */
+.bt {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 40px; height: 28px; border-radius: 8px;
+  font-size: 12px; font-weight: 700; font-family: var(--font);
+  padding: 0 8px;
+}
+.bt-Apos  { background: rgba(232,54,61,.18); color: #FF8A8E; }
+.bt-Aneg  { background: rgba(232,54,61,.1);  color: #FFAAAD; }
+.bt-Bpos  { background: rgba(79,142,247,.18); color: #7AABFF; }
+.bt-Bneg  { background: rgba(79,142,247,.1);  color: #9FC3FF; }
+.bt-ABpos { background: rgba(168,85,247,.18); color: #C89FF7; }
+.bt-ABneg { background: rgba(168,85,247,.1);  color: #D9BFFF; }
+.bt-Opos  { background: rgba(0,214,143,.18);  color: #55EFC4; }
+.bt-Oneg  { background: rgba(0,214,143,.1);   color: #81F5D9; }
+
+/* ── STATUS PILLS ───────────────────────────────────────────── */
+.pill {
+  display: inline-block; padding: 3px 10px; border-radius: 99px;
+  font-size: 11px; font-weight: 600;
+}
+.pill-green    { background: var(--green-lt);  color: var(--green); }
+.pill-yellow   { background: var(--yellow-lt); color: var(--yellow); }
+.pill-red      { background: var(--red-lt);    color: #FF7A7F; }
+.pill-blue     { background: var(--blue-lt);   color: var(--blue); }
+.pill-purple   { background: var(--purple-lt); color: var(--purple); }
+.pill-muted    { background: rgba(107,127,163,.12); color: var(--muted2); }
+
+/* ── PROGRESS BAR ───────────────────────────────────────────── */
+.bar-wrap { display: flex; align-items: center; gap: 10px; }
+.bar-bg { flex: 1; height: 5px; background: rgba(255,255,255,.07); border-radius: 99px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 99px; transition: width .6s ease; }
+.bar-green  { background: var(--green); }
+.bar-yellow { background: var(--yellow); }
+.bar-red    { background: var(--red); }
+.bar-num { font-size: 12px; font-weight: 600; width: 36px; text-align: right; color: var(--muted2); }
+
+/* ── FORMS ──────────────────────────────────────────────────── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 7px; }
+.form-label { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.form-input, .form-select {
+  background: var(--navy2); border: 1px solid var(--line2);
+  color: var(--text); border-radius: 10px; padding: 11px 14px;
+  font-family: var(--body); font-size: 13.5px;
+  outline: none; transition: border .18s, box-shadow .18s;
+  width: 100%;
+}
+.form-input:focus, .form-select:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-glow);
+}
+.form-select option { background: var(--navy2); }
+.form-input::placeholder { color: var(--muted); }
+
+.form-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 14px; }
+.form-full { grid-column: 1/-1; }
+
+/* ── BUTTONS ────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: none; border-radius: 10px; padding: 11px 22px;
+  font-family: var(--body); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all .18s; white-space: nowrap;
+}
+.btn-primary {
+  background: var(--red); color: white;
+  box-shadow: 0 4px 16px var(--red-glow);
+}
+.btn-primary:hover { background: var(--red-dk); transform: translateY(-1px); }
+.btn-secondary {
+  background: var(--card2); color: var(--text);
+  border: 1px solid var(--line2);
+}
+.btn-secondary:hover { background: var(--card3); }
+.btn-green { background: var(--green); color: #000; font-weight: 700; }
+.btn-green:hover { opacity: .88; }
+.btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 8px; }
+
+/* ── ALERTS LIST ────────────────────────────────────────────── */
+.alert-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid var(--line);
+}
+.alert-row:last-child { border-bottom: none; }
+.alert-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.alert-dot.Critical { background: var(--red); box-shadow: 0 0 8px var(--red); animation: pulse 1s infinite; }
+.alert-dot.High { background: var(--yellow); }
+.alert-dot.Normal { background: var(--green); }
+.alert-info { flex: 1; min-width: 0; }
+.alert-type { font-size: 13px; font-weight: 500; }
+.alert-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.alert-units { font-family: var(--font); font-size: 17px; font-weight: 700; }
+
+/* ── GOLDEN HOUR ALERT ──────────────────────────────────────── */
+.golden-alert {
+  background: linear-gradient(135deg, rgba(232,54,61,.12), rgba(232,54,61,.05));
+  border: 1px solid rgba(232,54,61,.4);
+  border-radius: var(--r2);
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+.golden-alert::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--red), transparent);
+}
+.golden-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.golden-badge {
+  background: var(--red); color: white;
+  font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 6px;
+  display: flex; align-items: center; gap: 5px;
+  flex-shrink: 0;
+}
+.golden-title { font-family: var(--font); font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.golden-msg { font-size: 12.5px; color: var(--muted2); line-height: 1.5; }
+.countdown-wrap { margin-top: 14px; display: flex; align-items: center; gap: 16px; }
+.countdown-timer {
+  display: flex; gap: 8px;
+}
+.countdown-seg {
+  display: flex; flex-direction: column; align-items: center;
+  background: rgba(0,0,0,.3); border-radius: 10px; padding: 8px 12px; min-width: 52px;
+}
+.countdown-num { font-family: var(--font); font-size: 22px; font-weight: 700; color: var(--red); line-height: 1; }
+.countdown-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
+.countdown-sep { font-family: var(--font); font-size: 20px; font-weight: 700; color: var(--red); align-self: flex-start; padding-top: 8px; }
+
+/* ── ELIGIBILITY CHECKER ────────────────────────────────────── */
+.check-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+.check-row:last-child { border-bottom: none; }
+.check-label { font-size: 13.5px; font-weight: 500; }
+.check-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.toggle-wrap { display: flex; gap: 8px; }
+.toggle-opt {
+  padding: 5px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1px solid var(--line2);
+  background: none; color: var(--muted2); transition: all .15s;
+}
+.toggle-opt.yes.selected { background: rgba(232,54,61,.2); color: var(--red); border-color: var(--red); }
+.toggle-opt.no.selected  { background: var(--green-lt); color: var(--green); border-color: var(--green); }
+
+.result-box {
+  border-radius: var(--r2); padding: 20px 22px; margin-top: 16px;
+  display: none;
+}
+.result-box.pass { background: var(--green-lt); border: 1px solid rgba(0,214,143,.3); }
+.result-box.fail { background: var(--red-lt); border: 1px solid rgba(232,54,61,.3); }
+.result-icon { font-size: 28px; margin-bottom: 6px; }
+.result-title { font-family: var(--font); font-size: 18px; font-weight: 600; }
+.result-reason { font-size: 13px; color: var(--muted2); margin-top: 6px; line-height: 1.5; }
+
+/* ── LEADERBOARD ────────────────────────────────────────────── */
+.leader-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 0; border-bottom: 1px solid var(--line);
+}
+.leader-row:last-child { border-bottom: none; }
+.rank-num {
+  font-family: var(--font); font-size: 18px; font-weight: 700;
+  width: 32px; text-align: center; flex-shrink: 0;
+}
+.rank-1 { color: var(--yellow); }
+.rank-2 { color: var(--muted2); }
+.rank-3 { color: #CD7F32; }
+.leader-avatar {
+  width: 38px; height: 38px; border-radius: 12px;
+  background: var(--card3); display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.leader-name { font-size: 14px; font-weight: 600; }
+.leader-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.leader-pts { margin-left: auto; font-family: var(--font); font-size: 16px; font-weight: 700; color: var(--yellow); }
+
+/* ── BLOOD BANK CARDS ───────────────────────────────────────── */
+.banks-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; }
+.bank-card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--r2); padding: 14px 16px;
+  transition: border-color .2s; min-width: 0; overflow: hidden;
+}
+.bank-card:hover { border-color: var(--line2); }
+.bank-name { font-family: var(--font); font-size: 12.5px; font-weight: 600; margin-bottom: 3px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bank-addr { font-size: 11px; color: var(--muted); margin-bottom: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bank-stocks { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 4px; }
+.mini-stock {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: rgba(255,255,255,.04); border: 1px solid var(--line);
+  border-radius: 6px; padding: 5px 3px; min-width: 0;
+}
+.mini-stock .bt-l { font-weight: 700; font-size: 9.5px; white-space: nowrap; }
+.mini-stock .u-l  { color: var(--muted); font-size: 9px; }
+
+/* ── CAMP CARDS ─────────────────────────────────────────────── */
+.camp-card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--r2); padding: 18px 20px;
+  transition: transform .2s;
+}
+.camp-card:hover { transform: translateY(-2px); }
+.camp-org { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.camp-org-icon {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: var(--blue-lt); display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.camp-org-name { font-size: 13px; font-weight: 600; }
+.camp-org-type { font-size: 11px; color: var(--muted); }
+.camp-title { font-family: var(--font); font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+.camp-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.camp-chip {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,.04); border: 1px solid var(--line);
+  border-radius: 8px; padding: 4px 10px; font-size: 11.5px; color: var(--muted2);
+}
+.camp-progress { margin-bottom: 12px; }
+.camp-prog-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+
+/* ── FORECAST ───────────────────────────────────────────────── */
+.forecast-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid var(--line);
+}
+.forecast-item:last-child { border-bottom: none; }
+.forecast-icon { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+.forecast-info { flex: 1; }
+.forecast-type { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.forecast-detail { font-size: 11px; color: var(--muted); }
+.forecast-val { font-family: var(--font); font-size: 16px; font-weight: 700; }
+.forecast-conf { font-size: 10px; color: var(--muted); text-align: right; margin-top: 2px; }
+
+
+
+/* ── COMPATIBLE DONORS ──────────────────────────────────────── */
+.compat-result { margin-top: 16px; }
+.donor-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid var(--line);
+}
+.donor-row:last-child { border-bottom: none; }
+.donor-avatar {
+  width: 36px; height: 36px; border-radius: 11px;
+  background: var(--card3); display: flex; align-items: center; justify-content: center;
+  font-size: 15px; flex-shrink: 0;
+}
+.donor-name { font-size: 13.5px; font-weight: 600; }
+.donor-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── TOAST ──────────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--card2); border: 1px solid var(--line2);
+  border-radius: 14px; padding: 14px 20px;
+  font-size: 13px; color: var(--text);
+  transform: translateY(20px); opacity: 0;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  z-index: 9999; pointer-events: none;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  display: flex; align-items: center; gap: 10px;
+  max-width: 320px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── EXPIRY TABLE ROWS ──────────────────────────────────────── */
+.expiry-row { font-size: 12.5px; }
+.expiry-days-crit { color: var(--red); font-weight: 700; }
+.expiry-days-warn { color: var(--yellow); font-weight: 600; }
+.expiry-days-ok   { color: var(--green); }
+
+/* ── SECTION DIVIDER ────────────────────────────────────────── */
+.section-sep {
+  height: 1px; background: var(--line);
+  margin: 22px 0;
+}
+.empty-state {
+  text-align: center; padding: 36px 20px; color: var(--muted);
+  font-size: 13px;
+}
+.empty-state .es-icon { font-size: 32px; margin-bottom: 10px; }
+
+/* ── CHART WRAP ─────────────────────────────────────────────── */
+.chart-wrap { position: relative; }
+
+/* ── MAP ────────────────────────────────────────────────────── */
+#bankMap { height: 400px; width: 100%; display: block; border-radius: var(--r2); overflow: hidden; border: 1px solid var(--line); }
+.leaflet-container { background: #0B1629 !important; }
+.map-legend { display: flex; gap: 18px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+.map-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted2); }
+.map-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.bank-popup { font-family: var(--body); min-width: 180px; }
+.bank-popup h4 { font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #111; }
+.bank-popup-stock { display: flex; flex-wrap: wrap; gap: 4px; }
+.bank-popup-bt { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 5px; }
+
+/* ── COUNTER ANIMATION ──────────────────────────────────────── */
+@keyframes countUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.stat-val.counting { animation: countUp .4s ease forwards; }
+
+/* ── PULSE RING on active alerts ────────────────────────────── */
+@keyframes ring { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(2.2); opacity: 0; } }
+.alert-dot.Critical::after {
+  content: ''; position: absolute; top: -2px; left: -2px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--red); animation: ring 1.2s infinite;
+}
+.alert-dot { position: relative; }
+
+/* ── SCROLLING TICKER ───────────────────────────────────────── */
+.ticker-wrap {
+  background: rgba(232,54,61,.08); border-bottom: 1px solid rgba(232,54,61,.2);
+  padding: 7px 32px; overflow: hidden; white-space: nowrap;
+}
+.ticker-inner {
+  display: inline-block;
+  animation: ticker 30s linear infinite;
+}
+@keyframes ticker { 0% { transform: translateX(100vw); } 100% { transform: translateX(-100%); } }
+.ticker-item { display: inline; font-size: 12px; color: var(--muted2); margin-right: 48px; }
+.ticker-item span { color: var(--red); font-weight: 700; }
+
+/* ── HEATMAP ROW ────────────────────────────────────────────── */
+.heatmap-grid { display: grid; grid-template-columns: repeat(8, minmax(0,1fr)); gap: 8px; margin-top: 14px; }
+.heatmap-cell {
+  aspect-ratio: 1; border-radius: 10px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; cursor: default;
+  transition: transform .15s;
+}
+.heatmap-cell:hover { transform: scale(1.08); }
+.heatmap-label { font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+.heatmap-val { font-family: var(--font); font-size: 16px; font-weight: 700; }
+.hc-critical { background: rgba(232,54,61,.25); border: 1px solid rgba(232,54,61,.4); }
+.hc-low      { background: rgba(245,200,66,.2); border: 1px solid rgba(245,200,66,.35); }
+.hc-ok       { background: rgba(0,214,143,.15); border: 1px solid rgba(0,214,143,.3); }
+
+/* ── AUTOCOMPLETE ───────────────────────────────────────────── */
+.autocomplete-wrap { position: relative; width: 100%; }
+.autocomplete-list {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 999;
+  background: var(--navy2); border: 1px solid var(--line2);
+  border-radius: 10px; margin-top: 4px;
+  max-height: 200px; overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  display: none;
+}
+.autocomplete-list.open { display: block; }
+.autocomplete-item {
+  padding: 10px 14px; font-size: 13px; cursor: pointer;
+  color: var(--muted2); transition: background .12s;
+}
+.autocomplete-item:hover, .autocomplete-item.selected {
+  background: var(--red-lt); color: var(--text);
+}
+.autocomplete-item strong { color: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">
+      <div class="logo-icon">🩸</div>
+      <div>
+        <div class="logo-text">BloodConnect</div>
+        <div class="logo-sub">Bengaluru Network</div>
+      </div>
+    </div>
+  </div>
+  <nav class="nav">
+    <div class="nav-label">Overview</div>
+    <button class="nav-btn active" onclick="showPage('dashboard',this)">
+      <span class="nav-icon">📊</span> Dashboard
+    </button>
+    <button class="nav-btn" onclick="showPage('inventory',this)">
+      <span class="nav-icon">🩸</span> Inventory
+    </button>
+
+    <div class="nav-label">Operations</div>
+    <button class="nav-btn" onclick="showPage('donors',this)">
+      <span class="nav-icon">👤</span> Donors
+    </button>
+    <button class="nav-btn" onclick="showPage('requests',this)">
+      <span class="nav-icon">📋</span> Requests
+    </button>
+    <button class="nav-btn" onclick="showPage('alerts',this)">
+      <span class="nav-icon">🚨</span> Emergency Alerts
+      <span class="nav-badge" id="alertBadge">0</span>
+    </button>
+
+    <div class="nav-label">Features</div>
+    <button class="nav-btn" onclick="showPage('eligibility',this)">
+      <span class="nav-icon">✅</span> Eligibility Check
+    </button>
+    <button class="nav-btn" onclick="showPage('compatible',this)">
+      <span class="nav-icon">🔍</span> Find Donors
+    </button>
+    <button class="nav-btn" onclick="showPage('camps',this)">
+      <span class="nav-icon">🏕️</span> Donation Camps
+    </button>
+    <button class="nav-btn" onclick="showPage('leaderboard',this)">
+      <span class="nav-icon">🏆</span> Leaderboard
+    </button>
+    <button class="nav-btn" onclick="showPage('forecast',this)">
+      <span class="nav-icon">📈</span> AI Forecast
+    </button>
+
+    <div class="nav-label">Network</div>
+    <button class="nav-btn" onclick="showPage('banks',this)">
+      <span class="nav-icon">🏥</span> Blood Banks
+    </button>
+    <button class="nav-btn" onclick="showPage('map',this)">
+      <span class="nav-icon">🗺️</span> Live Map
+    </button>
+    <button class="nav-btn" onclick="showPage('expiry',this)">
+      <span class="nav-icon">⏳</span> Expiry Tracker
+    </button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="api-status">
+      <span class="status-dot" id="apiDot"></span>
+      <span id="apiStatusText">Connecting...</span>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="page-title" id="topTitle">Blood <span>Dashboard</span></div>
+  <div class="topbar-right">
+    <div class="chip">📍 <strong>Bengaluru</strong>, KA</div>
+    <div class="chip" id="liveTime">--:--</div>
+    <button class="btn-refresh" onclick="loadAll()">⟳ Refresh</button>
+  </div>
+</div>
+
+<div class="ticker-wrap">
+  <div class="ticker-inner" id="tickerInner">
+    <span class="ticker-item">🩸 O- blood critically low at <span>NIMHANS Blood Bank</span> — 7 units remaining</span>
+    <span class="ticker-item">🚨 Golden Hour alert active — <span>Apollo Hospital</span> needs AB+ immediately</span>
+    <span class="ticker-item">✅ IIM Bangalore donation camp on <span>May 15</span> — 100 donors expected</span>
+    <span class="ticker-item">📊 AI forecast: O+ demand predicted to rise <span>12%</span> next month</span>
+    <span class="ticker-item">🏆 Leaderboard updated — <span>Arjun Mehta</span> leads with 2350 points</span>
+  </div>
+</div>
+
+<div class="page-content">
+
+<!-- ═══════════════════════════════════════════════════════════
+     DASHBOARD
+════════════════════════════════════════════════════════════ -->
+<div id="dashboard" class="page active">
+
+  <div class="stats-grid">
+    <div class="stat-card c-red">
+      <div class="stat-icon-wrap">👥</div>
+      <div class="stat-label">Total Donors</div>
+      <div class="stat-val" id="s-totalDonors">--</div>
+      <div class="stat-sub">Registered in system</div>
+    </div>
+    <div class="stat-card c-green">
+      <div class="stat-icon-wrap">✅</div>
+      <div class="stat-label">Eligible</div>
+      <div class="stat-val" id="s-eligible">--</div>
+      <div class="stat-sub">Ready to donate</div>
+    </div>
+    <div class="stat-card c-yellow">
+      <div class="stat-icon-wrap">🩸</div>
+      <div class="stat-label">Total Units</div>
+      <div class="stat-val" id="s-units">--</div>
+      <div class="stat-sub">Across all blood banks</div>
+    </div>
+    <div class="stat-card c-blue">
+      <div class="stat-icon-wrap">📋</div>
+      <div class="stat-label">Pending Requests</div>
+      <div class="stat-val" id="s-pending">--</div>
+      <div class="stat-sub">Awaiting approval</div>
+    </div>
+    <div class="stat-card c-purple">
+      <div class="stat-icon-wrap">🚨</div>
+      <div class="stat-label">Active Alerts</div>
+      <div class="stat-val" id="s-alerts">--</div>
+      <div class="stat-sub">Emergency broadcasts</div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">Blood Inventory by Type</div>
+      <div class="card-sub">Current units available across all banks</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="inventoryChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Stock Status Distribution</div>
+      <div class="card-sub">Available / Low / Critical breakdown</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="statusChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">Blood Type Heatmap</div>
+      <div class="card-sub">Quick visual — stock level across all 8 types</div>
+      <div class="heatmap-grid" id="heatmapGrid"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Active Requests</div>
+      <div class="card-sub">Recent blood requests by urgency</div>
+      <div id="dashAlertsList"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LIVE MAP
+════════════════════════════════════════════════════════════ -->
+<div id="map" class="page">
+  <div class="card mb">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+      <div>
+        <div class="card-title">🗺️ Bengaluru Blood Bank Network</div>
+        <div class="card-sub" style="margin-bottom:0">Live stock levels — pin colour indicates status · click any bank for details</div>
+      </div>
+      <div class="map-legend">
+        <div class="map-legend-item"><div class="map-legend-dot" style="background:var(--green)"></div>Adequate Stock</div>
+        <div class="map-legend-item"><div class="map-legend-dot" style="background:var(--yellow)"></div>Low Stock</div>
+        <div class="map-legend-item"><div class="map-legend-dot" style="background:var(--red)"></div>Critical</div>
+      </div>
+    </div>
+    <div id="bankMap"></div>
+  </div>
+  <div class="banks-grid" id="mapBankCards"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     INVENTORY
+════════════════════════════════════════════════════════════ -->
+<div id="inventory" class="page">
+  <div class="card mb">
+    <div class="card-title">Full Inventory</div>
+    <div class="card-sub">All blood types — status & unit count</div>
+    <table class="data-table" id="fullInvTable">
+      <thead><tr><th>Blood Type</th><th>Units</th><th>Level</th><th>Status</th></tr></thead>
+      <tbody id="fullInvBody"></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title">Inventory Bar Chart</div>
+    <div class="card-sub">Visual comparison of all blood types</div>
+    <div class="chart-wrap" style="height:280px"><canvas id="invBarChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DONORS
+════════════════════════════════════════════════════════════ -->
+<div id="donors" class="page">
+  <div style="display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:18px; margin-bottom:18px;">
+    <div class="card">
+      <div class="card-title">Register New Donor</div>
+      <div class="card-sub">Add a donor to the system</div>
+      <div class="form-grid" style="margin-top:4px">
+        <div class="form-group">
+          <label class="form-label">Full Name</label>
+          <input class="form-input" id="dName" placeholder="e.g. Ravi Kumar">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Blood Group</label>
+          <select class="form-select" id="dBlood">
+            <option value="">Select</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" id="dPhone" placeholder="98XXXXXXXX" inputmode="numeric" maxlength="10"
+            oninput="this.value=this.value.replace(/\D/g,''); validatePhone(this)">
+          <div id="phoneHint" style="font-size:11px;margin-top:4px;min-height:14px;color:var(--muted2)"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gender</label>
+          <select class="form-select" id="dGender">
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+  <label class="form-label">Date of Birth</label>
+  <input class="form-input" id="dDob" type="date" onchange="validateDobAge(this)">
+  <div id="dobHint" style="font-size:11px;margin-top:4px;min-height:14px;color:var(--muted2)"></div>
+</div>
+        <div class="form-group form-full">
+          <label class="form-label">City / Area</label>
+          <div class="autocomplete-wrap">
+            <input class="form-input" id="dCity" placeholder="Type area e.g. Koramangala..." autocomplete="off"
+              oninput="acFilter('dCity','dCityList'); resetLocationStatus()">
+            <div class="autocomplete-list" id="dCityList"></div>
+          </div>
+        </div>
+        <!-- LOCATION ROW -->
+        <div class="form-group form-full" style="margin-top:2px">
+          <label class="form-label">📍 Location Coordinates</label>
+          <div style="display:flex;gap:8px;align-items:stretch">
+            <input class="form-input" id="dLat" placeholder="Latitude" readonly
+              style="flex:1;background:var(--navy3);cursor:default;color:var(--muted2);font-size:12px">
+            <input class="form-input" id="dLng" placeholder="Longitude" readonly
+              style="flex:1;background:var(--navy3);cursor:default;color:var(--muted2);font-size:12px">
+            <button class="btn btn-secondary" id="gpsBtn" onclick="useGPS()" title="Use my current GPS location"
+              style="padding:10px 14px;white-space:nowrap;flex-shrink:0">
+              📡 GPS
+            </button>
+            <button class="btn btn-secondary" id="geocodeBtn" onclick="geocodeCity()" title="Geocode from city/address"
+              style="padding:10px 14px;white-space:nowrap;flex-shrink:0">
+              🔍 Lookup
+            </button>
+          </div>
+          <div id="locationStatus" style="margin-top:6px;font-size:11.5px;min-height:16px"></div>
+        </div>
+        <input type="hidden" id="dAddress">
+      </div>
+      <div style="margin-top:16px">
+        <button class="btn btn-primary" onclick="addDonor()">➕ Register Donor</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Badge Distribution</div>
+      <div class="card-sub">Donor loyalty tiers</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="badgeChart"></canvas></div>
+      <div class="section-sep"></div>
+      <div style="display:flex;flex-direction:column;gap:7px;font-size:12px;color:var(--muted2)">
+        <span>🥉 Bronze — 1+ donations</span>
+        <span>🥈 Silver — 5+ donations</span>
+        <span>🥇 Gold — 10+ donations</span>
+        <span style="color:var(--purple)">💎 Platinum — 20+</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" style="margin-bottom:14px">
+      <div>
+        <div class="card-title">All Donors</div>
+        <div class="card-sub" style="margin-bottom:0">Registered donor list</div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="donorTable">
+        <thead><tr>
+          <th style="width:18%">Name</th>
+          <th style="width:8%">Blood</th>
+          <th style="width:16%">City</th>
+          <th style="width:7%">📍 Loc</th>
+          <th style="width:9%">Donations</th>
+          <th style="width:13%">Badge</th>
+          <th style="width:13%">Status</th>
+          <th style="width:13%">Action</th>
+        </tr></thead>
+        <tbody><tr><td colspan="6" style="color:var(--muted);padding:20px;text-align:center">Loading donors...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     REQUESTS
+════════════════════════════════════════════════════════════ -->
+<div id="requests" class="page">
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">Create Blood Request</div>
+      <div class="card-sub">Submit a new blood requirement</div>
+      <div class="form-grid" style="margin-top:4px">
+        <div class="form-group">
+          <label class="form-label">Blood Group</label>
+          <select class="form-select" id="reqBlood">
+            <option value="">Select</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Units Needed</label>
+          <input class="form-input" id="reqUnits" type="number" min="0.5" step="0.5" placeholder="e.g. 2">
+        </div>
+        <div class="form-group form-full">
+          <label class="form-label">Urgency Level</label>
+          <select class="form-select" id="reqUrgency">
+            <option value="Normal">🟢 Normal</option>
+            <option value="High">🟡 High</option>
+            <option value="Critical">🔴 Critical</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:16px">
+        <button class="btn btn-primary" onclick="createRequest()">📋 Submit Request</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">All Requests</div>
+      <div class="card-sub">Live blood request feed</div>
+      <div id="requestsList" style="margin-top:4px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     EMERGENCY ALERTS (GOLDEN HOUR)
+════════════════════════════════════════════════════════════ -->
+<div id="alerts" class="page">
+
+  <div class="g2">
+    <div>
+      <div id="activeAlerts">
+        <div class="empty-state">
+          <div class="es-icon">🚨</div>
+          Loading alerts...
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🚨 Broadcast Emergency Alert</div>
+      <div class="card-sub">Sends Golden Hour SOS to nearby donors</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:4px">
+        <div class="form-group">
+          <label class="form-label">Blood Type Needed</label>
+          <select class="form-select" id="alertBlood">
+            <option value="">Select</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Units Required</label>
+          <input class="form-input" id="alertUnits" type="number" min="1" placeholder="e.g. 2">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Message</label>
+          <input class="form-input" id="alertMsg" placeholder="e.g. Urgent trauma case at Apollo Hospital">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Search Radius (km)</label>
+          <input class="form-input" id="alertRadius" type="number" value="10">
+        </div>
+        <button class="btn btn-primary" onclick="createAlert()">🚨 Send Golden Hour Alert</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ELIGIBILITY CHECKER
+════════════════════════════════════════════════════════════ -->
+<div id="eligibility" class="page">
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">Donor Health Screening</div>
+      <div class="card-sub">Auto eligibility check based on WHO guidelines</div>
+
+      <div style="display:flex;flex-direction:column;gap:0;margin-top:8px">
+
+        <div class="form-grid" style="margin-bottom:16px">
+          <div class="form-group">
+            <label class="form-label">Donor ID</label>
+            <input class="form-input" id="elgDonorId" type="number" placeholder="Donor ID">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gender</label>
+            <select class="form-select" id="elgGender">
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Hemoglobin (g/dL)</label>
+            <input class="form-input" id="elgHemo" type="number" step="0.1" placeholder="e.g. 13.5">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Weight (kg)</label>
+            <input class="form-input" id="elgWeight" type="number" placeholder="e.g. 60">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Blood Pressure</label>
+            <input class="form-input" id="elgBP" placeholder="e.g. 120/80">
+          </div>
+        </div>
+
+        <div class="check-row">
+          <div>
+            <div class="check-label">Recent Tattoo / Piercing</div>
+            <div class="check-sub">Within the last 6 months?</div>
+          </div>
+          <div class="toggle-wrap">
+            <button class="toggle-opt yes" data-field="tattoo" onclick="toggleCheck(this,'tattoo',true)">Yes</button>
+            <button class="toggle-opt no selected" data-field="tattoo" onclick="toggleCheck(this,'tattoo',false)">No</button>
+          </div>
+        </div>
+
+        <div class="check-row">
+          <div>
+            <div class="check-label">Travelled to Malaria Zone</div>
+            <div class="check-sub">Within the last 12 months?</div>
+          </div>
+          <div class="toggle-wrap">
+            <button class="toggle-opt yes" data-field="malaria" onclick="toggleCheck(this,'malaria',true)">Yes</button>
+            <button class="toggle-opt no selected" data-field="malaria" onclick="toggleCheck(this,'malaria',false)">No</button>
+          </div>
+        </div>
+
+        <div class="check-row">
+          <div>
+            <div class="check-label">Currently on Medication</div>
+            <div class="check-sub">Any prescription drugs?</div>
+          </div>
+          <div class="toggle-wrap">
+            <button class="toggle-opt yes" data-field="med" onclick="toggleCheck(this,'med',true)">Yes</button>
+            <button class="toggle-opt no selected" data-field="med" onclick="toggleCheck(this,'med',false)">No</button>
+          </div>
+        </div>
+
+        <div class="check-row">
+          <div>
+            <div class="check-label">Recent Illness / Fever</div>
+            <div class="check-sub">In the last 2 weeks?</div>
+          </div>
+          <div class="toggle-wrap">
+            <button class="toggle-opt yes" data-field="ill" onclick="toggleCheck(this,'ill',true)">Yes</button>
+            <button class="toggle-opt no selected" data-field="ill" onclick="toggleCheck(this,'ill',false)">No</button>
+          </div>
+        </div>
+
+        <div class="check-row">
+          <div>
+            <div class="check-label">Pregnant / Nursing</div>
+            <div class="check-sub">Currently pregnant or breastfeeding?</div>
+          </div>
+          <div class="toggle-wrap">
+            <button class="toggle-opt yes" data-field="preg" onclick="toggleCheck(this,'preg',true)">Yes</button>
+            <button class="toggle-opt no selected" data-field="preg" onclick="toggleCheck(this,'preg',false)">No</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="margin-top:20px;display:flex;gap:10px">
+        <button class="btn btn-primary" onclick="runEligibility()">🔬 Check Eligibility</button>
+        <button class="btn btn-secondary" onclick="resetEligibility()">Reset</button>
+      </div>
+
+      <div class="result-box" id="eligResult">
+        <div class="result-icon" id="eligIcon"></div>
+        <div class="result-title" id="eligTitle"></div>
+        <div class="result-reason" id="eligReason"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Eligibility Criteria</div>
+      <div class="card-sub">WHO-based donor screening guidelines</div>
+      <div style="display:flex;flex-direction:column;gap:0;margin-top:8px">
+        <div class="check-row">
+          <div class="check-label">Minimum Age</div>
+          <div class="pill pill-blue">18 – 65 years</div>
+        </div>
+        <div class="check-row">
+          <div class="check-label">Minimum Weight</div>
+          <div class="pill pill-blue">≥ 45 kg</div>
+        </div>
+        <div class="check-row">
+          <div class="check-label">Hemoglobin (Male)</div>
+          <div class="pill pill-green">≥ 13.0 g/dL</div>
+        </div>
+        <div class="check-row">
+          <div class="check-label">Hemoglobin (Female)</div>
+          <div class="pill pill-green">≥ 12.5 g/dL</div>
+        </div>
+        <div class="check-row">
+          <div class="check-label">Blood Pressure</div>
+          <div class="pill pill-blue">Systolic 90–160</div>
+        </div>
+        <div class="check-row">
+          <div class="check-label">Donation Interval</div>
+          <div class="pill pill-yellow">≥ 90 days</div>
+        </div>
+        <div class="check-row">
+          <div class="check-label">Tattoo / Piercing</div>
+          <div class="pill pill-red">Defers 6 months</div>
+        </div>
+        <div class="check-row">
+          <div class="check-label">Malaria Zone Travel</div>
+          <div class="pill pill-red">Defers 12 months</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     FIND COMPATIBLE DONORS
+════════════════════════════════════════════════════════════ -->
+<div id="compatible" class="page">
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">🔍 Find Compatible Donors</div>
+      <div class="card-sub">Search eligible donors by recipient blood type</div>
+      <div class="form-grid" style="margin:14px 0">
+        <div class="form-group">
+          <label class="form-label">Recipient Blood Type</label>
+          <select class="form-select" id="compBlood">
+            <option value="">Select type</option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">City (optional)</label>
+          <div class="autocomplete-wrap">
+            <input class="form-input" id="compCity" placeholder="Type area..." autocomplete="off" oninput="acFilter('compCity','compCityList')">
+            <div class="autocomplete-list" id="compCityList"></div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="findDonors()">🔍 Search Donors</button>
+      <div class="compat-result" id="compatResult"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Compatibility Matrix</div>
+      <div class="card-sub">Who can donate to whom</div>
+      <table class="data-table" style="margin-top:8px">
+        <thead><tr><th>Donor</th><th>Can Donate To</th></tr></thead>
+        <tbody>
+          <tr><td><span class="bt bt-Oneg">O−</span></td><td style="color:var(--muted2)">Everyone (Universal Donor)</td></tr>
+          <tr><td><span class="bt bt-Opos">O+</span></td><td style="color:var(--muted2)">O+, A+, B+, AB+</td></tr>
+          <tr><td><span class="bt bt-Aneg">A−</span></td><td style="color:var(--muted2)">A−, A+, AB−, AB+</td></tr>
+          <tr><td><span class="bt bt-Apos">A+</span></td><td style="color:var(--muted2)">A+, AB+</td></tr>
+          <tr><td><span class="bt bt-Bneg">B−</span></td><td style="color:var(--muted2)">B−, B+, AB−, AB+</td></tr>
+          <tr><td><span class="bt bt-Bpos">B+</span></td><td style="color:var(--muted2)">B+, AB+</td></tr>
+          <tr><td><span class="bt bt-ABneg">AB−</span></td><td style="color:var(--muted2)">AB−, AB+</td></tr>
+          <tr><td><span class="bt bt-ABpos">AB+</span></td><td style="color:var(--muted2)">AB+ only (Universal Recipient)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     DONATION CAMPS
+════════════════════════════════════════════════════════════ -->
+<div id="camps" class="page">
+  <div class="g2">
+    <div>
+      <div id="campsList" style="display:flex;flex-direction:column;gap:14px">
+        <div class="empty-state card"><div class="es-icon">🏕️</div>Loading camps...</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Schedule a Camp</div>
+      <div class="card-sub">Register a blood donation drive</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+        <div class="form-group">
+          <label class="form-label">Organizer Name</label>
+          <input class="form-input" id="campOrg" placeholder="e.g. IIM Bangalore">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Organizer Type</label>
+          <select class="form-select" id="campType">
+            <option>College</option><option>NGO</option>
+            <option>Corporate</option><option>Hospital</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Location</label>
+          <div class="autocomplete-wrap">
+            <input class="form-input" id="campLoc" placeholder="Type area or address..." autocomplete="off" oninput="acFilter('campLoc','campLocList')">
+            <div class="autocomplete-list" id="campLocList"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Camp Date</label>
+          <input class="form-input" id="campDate" type="date">
+        </div>
+        <div class="form-grid" style="gap:10px">
+          <div class="form-group">
+            <label class="form-label">Start Time</label>
+            <input class="form-input" id="campStart" type="time" value="09:00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Time</label>
+            <input class="form-input" id="campEnd" type="time" value="17:00">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Expected Donors</label>
+          <input class="form-input" id="campExpected" type="number" placeholder="e.g. 100">
+        </div>
+        <button class="btn btn-primary" onclick="scheduleCamp()">🏕️ Schedule Camp</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LEADERBOARD
+════════════════════════════════════════════════════════════ -->
+<div id="leaderboard" class="page">
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">🏆 Donor Leaderboard</div>
+      <div class="card-sub">Top donors by total points earned</div>
+      <div id="leaderList" style="margin-top:8px">
+        <div class="empty-state"><div class="es-icon">🏆</div>Loading leaderboard...</div>
+      </div>
+    </div>
+    <div>
+      <div class="card mb">
+        <div class="card-title">Points System</div>
+        <div class="card-sub">How donors earn points</div>
+        <div style="display:flex;flex-direction:column;gap:0;margin-top:8px">
+          <div class="forecast-item">
+            <div class="forecast-icon">🩸</div>
+            <div class="forecast-info"><div class="forecast-type">Successful Donation</div></div>
+            <div style="text-align:right"><div class="forecast-val" style="color:var(--green)">+100 pts</div></div>
+          </div>
+          <div class="forecast-item">
+            <div class="forecast-icon">🚨</div>
+            <div class="forecast-info"><div class="forecast-type">Emergency Alert Response</div></div>
+            <div style="text-align:right"><div class="forecast-val" style="color:var(--red)">+500 pts</div></div>
+          </div>
+          <div class="forecast-item">
+            <div class="forecast-icon">🏕️</div>
+            <div class="forecast-info"><div class="forecast-type">Camp Participation</div></div>
+            <div style="text-align:right"><div class="forecast-val" style="color:var(--blue)">+150 pts</div></div>
+          </div>
+          <div class="forecast-item">
+            <div class="forecast-icon">👥</div>
+            <div class="forecast-info"><div class="forecast-type">Referring a Donor</div></div>
+            <div style="text-align:right"><div class="forecast-val" style="color:var(--yellow)">+50 pts</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Badge Tiers</div>
+        <div class="card-sub">Donation milestones</div>
+        <div style="display:flex;flex-direction:column;gap:0;margin-top:8px">
+          <div class="check-row"><div class="check-label">🥉 Bronze</div><div class="pill pill-muted">1+ donations</div></div>
+          <div class="check-row"><div class="check-label">🥈 Silver</div><div class="pill pill-muted">5+ donations</div></div>
+          <div class="check-row"><div class="check-label">🥇 Gold</div><div class="pill pill-yellow">10+ donations</div></div>
+          <div class="check-row"><div class="check-label">💎 Platinum</div><div class="pill pill-purple">20+ donations</div></div>
+          <div class="check-row"><div class="check-label">🦸 Emergency Hero</div><div class="pill pill-red">Responded to SOS</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     AI FORECAST
+════════════════════════════════════════════════════════════ -->
+<div id="forecast" class="page">
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">📈 AI Demand Forecast</div>
+      <div class="card-sub">Predicted blood demand for next month based on 3-month moving average</div>
+      <div class="chart-wrap" style="height:260px;margin-bottom:18px"><canvas id="forecastChart"></canvas></div>
+      <div id="forecastList"></div>
+    </div>
+    <div>
+      <div class="card mb">
+        <div class="card-title">⚠️ Shortage Predictions</div>
+        <div class="card-sub">Blood types likely to run low next month</div>
+        <div id="shortageList" style="margin-top:8px">
+          <div class="empty-state"><div class="es-icon">📊</div>Loading forecast...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     BLOOD BANKS
+════════════════════════════════════════════════════════════ -->
+<div id="banks" class="page">
+  <div class="banks-grid" id="banksGrid">
+    <div class="card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px">Loading blood banks...</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     EXPIRY TRACKER
+════════════════════════════════════════════════════════════ -->
+<div id="expiry" class="page">
+  <div class="card">
+    <div class="card-title">⏳ Blood Expiry Tracker</div>
+    <div class="card-sub">Units expiring within the next 10 days — action required</div>
+    <table class="data-table" style="margin-top:8px" id="expiryTable">
+      <thead><tr><th>Blood Bank</th><th>Blood Type</th><th>Units</th><th>Expiry Date</th><th>Days Left</th><th>Action</th></tr></thead>
+      <tbody id="expiryBody">
+        <tr><td colspan="6" style="color:var(--muted);padding:20px;text-align:center">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- /page-content -->
+</div><!-- /main -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+let invChart, statusChart, invBarChart, badgeChart, forecastChart;
+let invData = [];
+let checkState = { tattoo:false, malaria:false, med:false, ill:false, preg:false };
+let countdownInterval = null;
+
+// ── BENGALURU AREAS (autocomplete) ───────────────────────────
+const BLR_AREAS = [
+  'Adugodi','Agara','Arekere','Ashok Nagar','Attibele','Avalahalli',
+  'Bagalagunte','Banaswadi','Banashankari','Bannerghatta Road','Basavangudi','Basavanagudi',
+  'Battarahalli','Begur','Bellandur','Benson Town','Bhattarahalli','Bidadi','Bommanahalli',
+  'Bommasandra','BTM Layout','Budigere',
+  'Chamrajpet','Chandapura','Chikkalasandra','Cooke Town','Cox Town',
+  'Dasarahalli','Devanahalli','Domlur','Dollar Colony',
+  'Electronic City','Ejipura',
+  'Frazer Town',
+  'Garvebhavipalya','Girinagar','Gottigere','Govindpura',
+  'HAL Layout','Halsur','Hanumanthanagar','Hebbal','Hennur','Hoodi','Horamavu','HSR Layout','Hulimavu',
+  'Indira Nagar','Indiranagar','Iblur','Ittamadu',
+  'Jakkasandra','Jalahalli','Jayanagar','JP Nagar','Jeevan Bhima Nagar',
+  'Kaggadasapura','Kaggalipura','Kammanahalli','Kanakpura Road','Kengeri','Koramangala',
+  'Kothanur','Kr Puram','KR Puram','Krishnarajapuram','Kudlu','Kundalahalli',
+  'Lakkasandra','Langford Town','Lavelle Road',
+  'Madiwala','Mahadevapura','Mahalakshmi Layout','Mallathahalli','Malleswaram','Mathikere',
+  'Mico Layout','Millers Road','MS Ramaiah Nagar','Munnekolala','Murugeshpalya','Mysore Road',
+  'Nagarbhavi','Nagasandra','Nandini Layout','New BEL Road',
+  'Old Airport Road','Old Madras Road',
+  'Padmanabhanagar','Panathur','Peenya','Puttenahalli',
+  'Rajarajeshwari Nagar','Rajajinagar','Rajiv Nagar','Ramaiah','Ramagondanahalli',
+  'Sadashivanagar','Sahakara Nagar','Sarjapur Road','Sarjapur','Shantinagar','Shankarapuram',
+  'Thanisandra','Thippasandra',
+  'Ullal','Ulsoor',
+  'Varthur','Vasanth Nagar','Vidyaranyapura','Vijayanagar','Virgonagar',
+  'Whitefield','Wilson Garden',
+  'Yelahanka','Yeshwanthpur',
+  'Rajajinagar','Richmond Town','RT Nagar'
+].sort();
+
+// ── AUTOCOMPLETE ENGINE ───────────────────────────────────────
+function acFilter(inputId, listId) {
+  const input = document.getElementById(inputId);
+  const list  = document.getElementById(listId);
+  if (!input || !list) return;
+  const val = input.value.trim().toLowerCase();
+  if (!val) { list.classList.remove('open'); return; }
+  const matches = BLR_AREAS.filter(a => a.toLowerCase().includes(val)).slice(0, 8);
+  if (!matches.length) { list.classList.remove('open'); return; }
+  list.innerHTML = matches.map(a => {
+    const idx = a.toLowerCase().indexOf(val);
+    const highlighted = a.slice(0,idx) + '<strong>' + a.slice(idx, idx+val.length) + '</strong>' + a.slice(idx+val.length);
+    return `<div class="autocomplete-item" onclick="acSelect('${inputId}','${listId}','${a}')">${highlighted}, Bengaluru</div>`;
+  }).join('');
+  list.classList.add('open');
+}
+
+function acSelect(inputId, listId, value) {
+  const input = document.getElementById(inputId);
+  const list  = document.getElementById(listId);
+  if (input) input.value = value;
+  if (list)  list.classList.remove('open');
+  // Auto-geocode when an area is picked in the donor registration form
+  if (inputId === 'dCity') {
+    geocodeCity();
+  }
+}
+
+// Close autocomplete when clicking outside
+document.addEventListener('click', e => {
+  document.querySelectorAll('.autocomplete-list').forEach(l => {
+    if (!l.previousElementSibling?.contains(e.target)) l.classList.remove('open');
+  });
+});
+
+// ── LOCATION DETECTION ────────────────────────────────────────
+function detectLocation() {
+  const status = document.getElementById('locationStatus');
+  if (status) { status.textContent = '⏳ Detecting your location...'; status.style.color = 'var(--yellow)'; }
+  if (!navigator.geolocation) {
+    if (status) { status.textContent = '❌ Geolocation not supported by your browser'; status.style.color = 'var(--red)'; }
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude.toFixed(7);
+      const lng = pos.coords.longitude.toFixed(7);
+      const latEl = document.getElementById('dLat');
+      const lngEl = document.getElementById('dLng');
+      if (latEl) latEl.value = lat;
+      if (lngEl) lngEl.value = lng;
+      if (status) {
+        status.textContent = `✅ Location detected — ${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}`;
+        status.style.color = 'var(--green)';
+      }
+    },
+    () => {
+      if (status) { status.textContent = '❌ Could not detect — please allow location permission'; status.style.color = 'var(--red)'; }
+    }
+  );
+}
+
+// ── SAMPLE DATA (fallback when backend is empty) ──────────────
+const SAMPLE_DONORS = [
+  {name:"Arjun Mehta",    blood_type:"O-",  city:"Koramangala",  total_donations:22,badge_level:"Platinum",is_eligible:true, phone:"9876543210"},
+  {name:"Priya Sharma",   blood_type:"A+",  city:"Whitefield",   total_donations:14,badge_level:"Gold",    is_eligible:true, phone:"9845123456"},
+  {name:"Suresh Gowda",   blood_type:"B+",  city:"HSR Layout",   total_donations:11,badge_level:"Gold",    is_eligible:false,phone:"9731234567"},
+  {name:"Divya Nair",     blood_type:"O+",  city:"Indiranagar",  total_donations:7, badge_level:"Silver",  is_eligible:true, phone:"9632145870"},
+  {name:"Rahul Krishnan", blood_type:"AB-", city:"Jayanagar",    total_donations:5, badge_level:"Silver",  is_eligible:true, phone:"8765432190"},
+  {name:"Ananya Reddy",   blood_type:"B-",  city:"JP Nagar",     total_donations:3, badge_level:"Bronze",  is_eligible:false,phone:"9087654321"},
+  {name:"Karthik Iyer",   blood_type:"A-",  city:"Malleswaram",  total_donations:8, badge_level:"Silver",  is_eligible:true, phone:"9123456780"},
+  {name:"Sneha Patel",    blood_type:"AB+", city:"Rajajinagar",  total_donations:1, badge_level:"Bronze",  is_eligible:true, phone:"8901234567"},
+  {name:"Vikram Nair",    blood_type:"O+",  city:"Banashankari", total_donations:17,badge_level:"Gold",     is_eligible:true, phone:"7890123456"},
+  {name:"Meera Iyer",     blood_type:"A+",  city:"Yelahanka",    total_donations:2, badge_level:"Bronze",  is_eligible:true, phone:"9456781230"},
+];
+const SAMPLE_INVENTORY = [
+  {blood_group:"A+",  units:480, status:"Available"},
+  {blood_group:"A-",  units:70,  status:"Low"},
+  {blood_group:"B+",  units:390, status:"Available"},
+  {blood_group:"B-",  units:55,  status:"Low"},
+  {blood_group:"AB+", units:210, status:"Available"},
+  {blood_group:"AB-", units:20,  status:"Critical"},
+  {blood_group:"O+",  units:620, status:"Available"},
+  {blood_group:"O-",  units:85,  status:"Low"},
+];
+const SAMPLE_REQUESTS = [
+  {request_id:1,blood_type:"O-", units_needed:2,urgency_level:"Critical",status:"Pending",  hospital:"Apollo Hospital"},
+  {request_id:2,blood_type:"AB-",units_needed:1,urgency_level:"High",    status:"Pending",  hospital:"Victoria Hospital"},
+  {request_id:3,blood_type:"B+", units_needed:3,urgency_level:"Normal",  status:"Approved", hospital:"Manipal Hospital"},
+  {request_id:4,blood_type:"A+", units_needed:2,urgency_level:"High",    status:"Pending",  hospital:"Fortis Hospital"},
+  {request_id:5,blood_type:"O+", units_needed:4,urgency_level:"Normal",  status:"Fulfilled",hospital:"Narayana Health"},
+];
+const SAMPLE_ALERTS = [
+  {alert_id:1,blood_type:"O-", blood_type_needed:"O-", units_needed:2,message:"URGENT: O- blood needed for trauma patient at Apollo Hospital.",radius_km:15,status:"Active",blood_bank_name:"City Blood Bank",response_count:3,golden_hour_deadline:new Date(Date.now()+35*60000).toISOString()},
+  {alert_id:2,blood_type:"AB-",blood_type_needed:"AB-",units_needed:1,message:"Critical AB- shortage at Victoria Hospital — surgery patient waiting.",radius_km:10,status:"Active",blood_bank_name:"Victoria BB",response_count:1,golden_hour_deadline:new Date(Date.now()+52*60000).toISOString()},
+];
+const SAMPLE_CAMPS = [
+  {camp_id:1,organizer_name:"IIM Bangalore",    organizer_type:"College",  location:"IIMB Campus, Bannerghatta Road",city:"Bengaluru",camp_date:"2026-05-15",start_time:"09:00:00",end_time:"17:00:00",expected_donors:100,actual_donors:0, status:"Upcoming"},
+  {camp_id:2,organizer_name:"Infosys Foundation",organizer_type:"Corporate",location:"Infosys, Electronic City",      city:"Bengaluru",camp_date:"2026-05-20",start_time:"10:00:00",end_time:"16:00:00",expected_donors:80, actual_donors:0, status:"Upcoming"},
+  {camp_id:3,organizer_name:"Rotary Club BLR",  organizer_type:"NGO",      location:"Town Hall, MG Road",             city:"Bengaluru",camp_date:"2026-04-28",start_time:"08:00:00",end_time:"14:00:00",expected_donors:60, actual_donors:54,status:"Completed"},
+  {camp_id:4,organizer_name:"PESIT College",    organizer_type:"College",  location:"PESIT Campus, BSK III Stage",    city:"Bengaluru",camp_date:"2026-05-25",start_time:"09:00:00",end_time:"15:00:00",expected_donors:120,actual_donors:0, status:"Upcoming"},
+];
+const SAMPLE_LEADERBOARD = [
+  {rank_overall:1, name:"Arjun Mehta",   blood_type:"O-", city:"Koramangala", badge_level:"Platinum",total_donations:22,total_points:2350},
+  {rank_overall:2, name:"Vikram Nair",   blood_type:"O+", city:"Banashankari",badge_level:"Gold",    total_donations:17,total_points:1750},
+  {rank_overall:3, name:"Priya Sharma",  blood_type:"A+", city:"Whitefield",  badge_level:"Gold",    total_donations:14,total_points:1500},
+  {rank_overall:4, name:"Lakshmi Devi",  blood_type:"O-", city:"Hebbal",      badge_level:"Gold",    total_donations:12,total_points:1250},
+  {rank_overall:5, name:"Suresh Gowda",  blood_type:"B+", city:"HSR Layout",  badge_level:"Gold",    total_donations:11,total_points:1150},
+  {rank_overall:6, name:"Karthik Iyer",  blood_type:"A-", city:"Malleswaram", badge_level:"Silver",  total_donations:8, total_points:850},
+  {rank_overall:7, name:"Divya Nair",    blood_type:"O+", city:"Indiranagar", badge_level:"Silver",  total_donations:7, total_points:750},
+  {rank_overall:8, name:"Rahul Krishnan",blood_type:"AB-",city:"Jayanagar",   badge_level:"Silver",  total_donations:5, total_points:500},
+  {rank_overall:9, name:"Rohit Sharma",  blood_type:"B+", city:"Electronic City",badge_level:"Silver",total_donations:6,total_points:650},
+  {rank_overall:10,name:"Ananya Reddy",  blood_type:"B-", city:"JP Nagar",    badge_level:"Bronze",  total_donations:3, total_points:300},
+];
+const SAMPLE_EXPIRY = [
+  {blood_bank:"City Blood Bank",  blood_type:"AB-",units_available:2,expiry_date:new Date(Date.now()+2*86400000).toISOString().slice(0,10),days_until_expiry:2},
+  {blood_bank:"Apollo Blood Bank",blood_type:"A-", units_available:3,expiry_date:new Date(Date.now()+4*86400000).toISOString().slice(0,10),days_until_expiry:4},
+  {blood_bank:"Victoria BB",      blood_type:"B-", units_available:1,expiry_date:new Date(Date.now()+5*86400000).toISOString().slice(0,10),days_until_expiry:5},
+  {blood_bank:"City Blood Bank",  blood_type:"O-", units_available:4,expiry_date:new Date(Date.now()+7*86400000).toISOString().slice(0,10),days_until_expiry:7},
+  {blood_bank:"Manipal BB",       blood_type:"AB+",units_available:2,expiry_date:new Date(Date.now()+9*86400000).toISOString().slice(0,10),days_until_expiry:9},
+];
+const SAMPLE_FORECAST = [
+  {blood_type:"O+", predicted_units:52,confidence_pct:85,shortage_risk:"High"},
+  {blood_type:"O-", predicted_units:23,confidence_pct:72,shortage_risk:"Critical"},
+  {blood_type:"A+", predicted_units:38,confidence_pct:80,shortage_risk:"Low"},
+  {blood_type:"A-", predicted_units:12,confidence_pct:68,shortage_risk:"High"},
+  {blood_type:"B+", predicted_units:29,confidence_pct:78,shortage_risk:"Low"},
+  {blood_type:"B-", predicted_units:9, confidence_pct:65,shortage_risk:"Critical"},
+  {blood_type:"AB+",predicted_units:18,confidence_pct:74,shortage_risk:"Low"},
+  {blood_type:"AB-",predicted_units:6, confidence_pct:60,shortage_risk:"Critical"},
+];
+// ── PAGE TITLES ───────────────────────────────────────────────
+const PAGE_TITLES = {
+  dashboard:'Blood <span>Dashboard</span>', inventory:'Blood <span>Inventory</span>',
+  donors:'Manage <span>Donors</span>', requests:'Blood <span>Requests</span>',
+  alerts:'<span>Emergency</span> Alerts', eligibility:'Eligibility <span>Checker</span>',
+  compatible:'Find <span>Donors</span>', camps:'Donation <span>Camps</span>',
+  leaderboard:'Donor <span>Leaderboard</span>', forecast:'AI <span>Forecast</span>',
+  banks:'Blood <span>Banks</span>', map:'Live <span>Map</span>', expiry:'Expiry <span>Tracker</span>',
+};
+
+// ── API HELPER ────────────────────────────────────────────────
+async function api(path, options={}) {
+  const res = await fetch(API+path, {headers:{"Content-Type":"application/json"}, ...options});
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+// ── API STATUS ────────────────────────────────────────────────
+async function checkApiStatus() {
+  const dot  = document.getElementById('apiDot');
+  const text = document.getElementById('apiStatusText');
+  try {
+    await fetch(API+"/health", {signal:AbortSignal.timeout(3000)});
+    if (dot)  { dot.style.background='var(--green)'; dot.style.boxShadow='0 0 8px var(--green)'; }
+    if (text) text.textContent = 'API Connected · Port 8000';
+  } catch {
+    if (dot)  { dot.style.background='#f00'; dot.style.boxShadow='0 0 8px #f00'; }
+    if (text) text.textContent = 'API Offline — sample data shown';
+  }
+}
+setInterval(checkApiStatus, 8000);
+
+// ── NAVIGATION ────────────────────────────────────────────────
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const target = document.getElementById(id);
+  if (!target) { console.error('Page not found:', id); return; }
+  target.classList.add('active');
+  if (btn) btn.classList.add('active');
+  const titleEl = document.getElementById('topTitle');
+  if (titleEl) titleEl.innerHTML = PAGE_TITLES[id] || id;
+  if (id==='inventory')   loadInventoryPage();
+  if (id==='donors')      { drawBadgeChart(); loadDonors(); }
+  if (id==='banks')       loadBanks();
+  if (id==='map')         loadMap();
+  if (id==='requests')    loadRequests();
+  if (id==='alerts')      loadAlerts();
+  if (id==='camps')       loadCamps();
+  if (id==='leaderboard') loadLeaderboard();
+  if (id==='forecast')    loadForecast();
+  if (id==='expiry')      loadExpiry();
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.innerHTML = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+function updateClock() {
+  const el = document.getElementById('liveTime');
+  if (el) el.textContent = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+setInterval(updateClock, 1000); updateClock();
+function btClass(bt) { return 'bt-'+(bt||'').replace('+','pos').replace('-','neg'); }
+function barColor(u) { return u>300?'bar-green':u>100?'bar-yellow':'bar-red'; }
+function statusPill(u) {
+  if (u>300) return '<span class="pill pill-green">Available</span>';
+  if (u>100) return '<span class="pill pill-yellow">Low</span>';
+  return '<span class="pill pill-red">Critical</span>';
+}
+function animateCount(el, target) {
+  if (!el) return;
+  const dur=800, start=performance.now();
+  function step(now) {
+    const p=Math.min((now-start)/dur,1);
+    el.textContent=Math.round(target*(1-Math.pow(1-p,3)));
+    if(p<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const d = await api('/dashboard');
+    animateCount(document.getElementById('s-totalDonors'), d.total_donors??SAMPLE_DONORS.length);
+    animateCount(document.getElementById('s-eligible'),    d.active_donors??d.eligible_donors??SAMPLE_DONORS.filter(x=>x.is_eligible).length);
+    animateCount(document.getElementById('s-units'),       Math.round(d.total_units??SAMPLE_INVENTORY.reduce((a,i)=>a+i.units,0)));
+    animateCount(document.getElementById('s-pending'),     d.pending_requests??SAMPLE_REQUESTS.filter(r=>r.status==='Pending').length);
+    animateCount(document.getElementById('s-alerts'),      d.active_alerts??SAMPLE_ALERTS.length);
+    const badge = document.getElementById('alertBadge');
+    if (badge) { const c=d.active_alerts??SAMPLE_ALERTS.length; badge.textContent=c; badge.style.display=c>0?'block':'none'; }
+  } catch(e) {
+    animateCount(document.getElementById('s-totalDonors'), SAMPLE_DONORS.length);
+    animateCount(document.getElementById('s-eligible'),    SAMPLE_DONORS.filter(x=>x.is_eligible).length);
+    animateCount(document.getElementById('s-units'),       SAMPLE_INVENTORY.reduce((a,i)=>a+i.units,0));
+    animateCount(document.getElementById('s-pending'),     SAMPLE_REQUESTS.filter(r=>r.status==='Pending').length);
+    animateCount(document.getElementById('s-alerts'),      SAMPLE_ALERTS.length);
+    const badge = document.getElementById('alertBadge');
+    if (badge) { badge.textContent=SAMPLE_ALERTS.length; badge.style.display='block'; }
+  }
+}
+
+// ── INVENTORY ─────────────────────────────────────────────────
+async function loadInventory() {
+  try { const r=await api('/inventory'); invData=r.length?r:SAMPLE_INVENTORY; } catch(e){ invData=SAMPLE_INVENTORY; }
+  drawInventoryChart(); drawStatusChart(); buildDashTable(); buildHeatmap();
+}
+
+function buildDashTable() {
+  const tbody=document.querySelector('#dashInvTable tbody');
+  if (!tbody||!invData.length) return;
+  const max=Math.max(...invData.map(i=>i.units),1);
+  tbody.innerHTML=invData.map(i=>{
+    const pct=Math.min(100,Math.round((i.units/max)*100));
+    return `<tr><td><span class="bt ${btClass(i.blood_group)}">${i.blood_group}</span></td>
+      <td><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill ${barColor(i.units)}" style="width:${pct}%"></div></div><span class="bar-num">${i.units}</span></div></td>
+      <td>${statusPill(i.units)}</td></tr>`;
+  }).join('');
+}
+
+function buildHeatmap() {
+  const grid=document.getElementById('heatmapGrid');
+  if (!grid||!invData.length) return;
+  grid.innerHTML=invData.map(i=>{
+    const cls=i.units>300?'hc-ok':i.units>100?'hc-low':'hc-critical';
+    const color=i.units>300?'var(--green)':i.units>100?'var(--yellow)':'var(--red)';
+    return `<div class="heatmap-cell ${cls}" title="${i.blood_group}: ${i.units} units">
+      <div class="heatmap-label" style="color:${color}">${i.blood_group}</div>
+      <div class="heatmap-val" style="color:${color}">${i.units}</div></div>`;
+  }).join('');
+}
+
+function drawInventoryChart() {
+  const ctx=document.getElementById('inventoryChart'); if(!ctx) return;
+  if(invChart) invChart.destroy();
+  invChart=new Chart(ctx,{type:'bar',data:{labels:invData.map(i=>i.blood_group),datasets:[{data:invData.map(i=>i.units),
+    backgroundColor:invData.map(i=>i.units>300?'rgba(0,214,143,.7)':i.units>100?'rgba(245,200,66,.7)':'rgba(232,54,61,.7)'),borderRadius:8,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#6B7FA3',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#6B7FA3',font:{size:11}}}}}});
+}
+
+function drawStatusChart() {
+  const ctx=document.getElementById('statusChart'); if(!ctx) return;
+  if(statusChart) statusChart.destroy();
+  const avail   = invData.filter(i=>(i.status ? i.status==='Available' : i.units>10)).length;
+  const low      = invData.filter(i=>(i.status ? i.status==='Low'       : i.units>0&&i.units<=10)).length;
+  const critical = invData.filter(i=>(i.status ? i.status==='Critical'  : i.units<=0)).length;
+  statusChart=new Chart(ctx,{type:'doughnut',data:{labels:['Available','Low','Critical'],datasets:[{
+    data:[avail,low,critical],
+    backgroundColor:['rgba(0,214,143,.8)','rgba(245,200,66,.8)','rgba(232,54,61,.8)'],borderWidth:0,hoverOffset:8}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'bottom',labels:{color:'#6B7FA3',padding:16,font:{size:12}}}}}});
+}
+
+async function loadInventoryPage() {
+  const tbody=document.getElementById('fullInvBody');
+  if (!tbody) { console.error('fullInvBody not found'); return; }
+  tbody.innerHTML='<tr><td colspan="4" style="color:var(--muted);padding:20px;text-align:center">Loading...</td></tr>';
+  let data=SAMPLE_INVENTORY;
+  try { const r=await api('/inventory'); if(r&&r.length) data=r; } catch(e){}
+  const max=Math.max(...data.map(i=>i.units),1);
+  tbody.innerHTML=data.map(i=>{
+    const pct=Math.min(100,Math.round((i.units/max)*100));
+    return '<tr><td><span class="bt '+btClass(i.blood_group)+'">'+i.blood_group+'</span></td>'+
+      '<td style="font-family:var(--font);font-weight:600">'+i.units+'</td>'+
+      '<td style="width:200px"><div class="bar-wrap"><div class="bar-bg"><div class="bar-fill '+barColor(i.units)+'" style="width:'+pct+'%"></div></div><span class="bar-num">'+pct+'%</span></div></td>'+
+      '<td>'+statusPill(i.units)+'</td></tr>';
+  }).join('');
+  const ctx=document.getElementById('invBarChart'); if(!ctx) return;
+  if(invBarChart) invBarChart.destroy();
+  invBarChart=new Chart(ctx,{type:'bar',data:{labels:data.map(i=>i.blood_group),datasets:[{label:'Units',data:data.map(i=>i.units),
+    backgroundColor:data.map(i=>i.units>300?'rgba(0,214,143,.7)':i.units>100?'rgba(245,200,66,.7)':'rgba(232,54,61,.7)'),borderRadius:10,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#6B7FA3'}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#6B7FA3'}}}}});
+}
+
+async function loadAlertsForDash() {
+  const div=document.getElementById('dashAlertsList'); if(!div) return;
+  let data=SAMPLE_REQUESTS;
+  try{ const r=await api('/requests'); if(r.length) data=r; }catch(e){}
+  div.innerHTML=data.slice(0,6).map(r=>{
+    const u=r.urgency||r.urgency_level||'Normal';
+    return `<div class="alert-row"><div class="alert-dot ${u}"></div>
+      <div class="alert-info"><div class="alert-type">${r.blood_group||r.blood_type||'?'} Blood${r.hospital?' — '+r.hospital:''}</div>
+      <div class="alert-meta">${u} Priority · ${r.status||'Pending'}</div></div>
+      <div class="alert-units">${r.units||r.units_needed||0}u</div></div>`;
+  }).join('');
+}
+
+// ── DONORS ────────────────────────────────────────────────────
+let localDonors = null; // runtime donor list — null means not yet loaded
+
+async function loadDonors() {
+  const tbody=document.querySelector('#donorTable tbody'); if(!tbody) return;
+  tbody.innerHTML='<tr><td colspan="6" style="color:var(--muted);padding:20px;text-align:center">Loading...</td></tr>';
+  // Always fetch fresh from backend — never use stale cache
+  try {
+    const r = await api('/donors');
+    localDonors = Array.isArray(r) && r.length ? r : [...SAMPLE_DONORS];
+  } catch(e) {
+    if (!localDonors) localDonors = [...SAMPLE_DONORS];
+  }
+  const data = localDonors;
+  tbody.innerHTML=data.map(d=>{
+    const b=d.badge_level||'None';
+    const icon=b==='Platinum'?'💎':b==='Gold'?'🥇':b==='Silver'?'🥈':b==='Bronze'?'🥉':'—';
+    const did = d.donor_id||d.id||0;
+    const elig = d.is_eligible;
+    return `<tr><td style="font-weight:500">${d.name}</td>
+      <td><span class="bt ${btClass(d.blood_type)}">${d.blood_type}</span></td>
+      <td style="color:var(--muted2)">${d.city||'—'}</td>
+      <td style="text-align:center">${(d.latitude&&d.longitude)?`<span title="${parseFloat(d.latitude).toFixed(4)}, ${parseFloat(d.longitude).toFixed(4)}" style="cursor:default">📍</span>`:'<span style="color:var(--muted);font-size:11px">—</span>'}</td>
+      <td style="font-family:var(--font);font-weight:600">${d.total_donations||0}</td>
+      <td>${icon} ${b==='None'?'—':b}</td>
+      <td>${elig?'<span class="pill pill-green">Eligible</span>':'<span class="pill pill-red">Deferred</span>'}</td>
+      <td>${elig
+        ? `<button class="btn btn-primary btn-sm" onclick="openDonationModal(${did},'${d.name}','${d.blood_type}')">💉 Record</button>`
+        : `<button class="btn btn-secondary btn-sm" disabled title="Donor is in 90-day cooldown" style="opacity:0.4;cursor:not-allowed">💉 Record</button>`
+      }</td></tr>`;
+  }).join('');
+}
+
+// ── DONATION MODAL ───────────────────────────────────────────
+let _donationDonorId = null;
+
+function openDonationModal(donorId, donorName, bloodType) {
+  _donationDonorId = donorId;
+  const sub = document.getElementById('donationModalSub');
+  if (sub) sub.textContent = `Donor: ${donorName}  ·  Blood Type: ${bloodType}`;
+  // Set today as default date
+  const dateEl = document.getElementById('donDate');
+  if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+  // Load blood banks into dropdown
+  loadBloodBanksIntoModal();
+  const modal = document.getElementById('donationModal');
+  if (modal) { modal.style.display = 'flex'; }
+}
+
+function closeDonationModal() {
+  const modal = document.getElementById('donationModal');
+  if (modal) modal.style.display = 'none';
+  _donationDonorId = null;
+}
+
+async function loadBloodBanksIntoModal() {
+  const sel = document.getElementById('donBloodBank');
+  if (!sel) return;
+  try {
+    const banks = await api('/blood-banks');
+    if (Array.isArray(banks) && banks.length) {
+      sel.innerHTML = banks.map(b =>
+        `<option value="${b.blood_bank_id||b.id}">${b.name}${b.city ? ' — '+b.city : ''}</option>`
+      ).join('');
+    }
+  } catch(e) {
+    sel.innerHTML = '<option value="1">City Blood Bank (Default)</option>';
+  }
+}
+
+async function submitDonation() {
+  if (!_donationDonorId) { toast('⚠️ No donor selected'); return; }
+  const bloodBankId = document.getElementById('donBloodBank').value;
+  const date        = document.getElementById('donDate').value;
+  const units       = parseFloat(document.getElementById('donUnits').value);
+  const status      = document.getElementById('donStatus').value;
+  const notes       = document.getElementById('donNotes').value.trim();
+
+  if (!date)         { toast('⚠️ Select a donation date'); return; }
+  if (!units||units<=0) { toast('⚠️ Enter valid units'); return; }
+
+  try {
+    const result = await api('/donations', { method: 'POST', body: JSON.stringify({
+      donor_id:      _donationDonorId,
+      blood_bank_id: parseInt(bloodBankId),
+      donation_date: date,
+      units_donated: units,
+      status,
+      health_notes:  notes || null,
+    })});
+    if (result && result.error) { toast('❌ ' + result.error); return; }
+    toast(status === 'Completed'
+      ? '✅ Donation recorded! Inventory, badge & leaderboard updated automatically.'
+      : '✅ Donation recorded with status: ' + status);
+    closeDonationModal();
+    localDonors = null; // force re-fetch so badge/eligibility reflects update
+    loadDonors(); loadDashboard(); drawBadgeChart();
+  } catch(e) {
+    toast('❌ Failed to record donation — is backend running?');
+  }
+}
+
+// Close modal on backdrop click
+document.addEventListener('click', e => {
+  const modal = document.getElementById('donationModal');
+  if (modal && e.target === modal) closeDonationModal();
+});
+
+async function drawBadgeChart() {
+  const ctx=document.getElementById('badgeChart'); if(!ctx) return;
+  let data = localDonors || SAMPLE_DONORS;
+  const counts={None:0,Bronze:0,Silver:0,Gold:0,Platinum:0};
+  data.forEach(d=>{ if(counts[d.badge_level]!==undefined) counts[d.badge_level]++; });
+  if(badgeChart) badgeChart.destroy();
+  badgeChart=new Chart(ctx,{type:'pie',data:{labels:Object.keys(counts),datasets:[{data:Object.values(counts),
+    backgroundColor:['rgba(107,127,163,.4)','rgba(205,127,50,.7)','rgba(192,192,192,.7)','rgba(255,215,0,.7)','rgba(168,85,247,.7)'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#6B7FA3',padding:12,font:{size:12}}}}}});
+}
+
+// ── PHONE VALIDATION ─────────────────────────────────────────
+function validatePhone(input) {
+  const hint = document.getElementById('phoneHint');
+  const val  = input.value;
+  if (!val) { hint.textContent = ''; input.style.borderColor = ''; return; }
+  if (val.length < 10) {
+    hint.textContent = `${val.length}/10 digits`;
+    hint.style.color = 'var(--yellow)';
+    input.style.borderColor = 'var(--yellow)';
+  } else if (!/^[6-9]\d{9}$/.test(val)) {
+    hint.textContent = '⚠️ Indian mobile numbers start with 6–9';
+    hint.style.color = '#FF7A7F';
+    input.style.borderColor = '#FF7A7F';
+  } else {
+    hint.textContent = '✅ Valid mobile number';
+    hint.style.color = 'var(--green)';
+    input.style.borderColor = 'var(--green)';
+  }
+}
+
+// ── DOB / AGE ELIGIBILITY ─────────────────────────────────────
+function validateDobAge(input) {
+  const hint = document.getElementById('dobHint');
+  const registerBtn = document.querySelector('[onclick="addDonor()"]');
+  if (!input.value) { hint.textContent = ''; return; }
+
+  const dob   = new Date(input.value);
+  const today = new Date();
+  // Calculate full years
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+
+  if (dob > today) {
+    hint.innerHTML = '⚠️ Date of birth cannot be in the future';
+    hint.style.color = '#FF7A7F';
+    input.style.borderColor = '#FF7A7F';
+    input.dataset.ageValid = 'false';
+    return;
+  }
+  if (age > 120) {
+    hint.textContent = '⚠️ Please enter a valid date of birth';
+    hint.style.color = '#FF7A7F';
+    input.style.borderColor = '#FF7A7F';
+    input.dataset.ageValid = 'false';
+    return;
+  }
+
+  input.dataset.age = age;
+
+  if (age < 18) {
+    hint.innerHTML = `🚫 Age <strong>${age}</strong> — must be at least 18 to donate`;
+    hint.style.color = '#FF7A7F';
+    input.style.borderColor = '#FF7A7F';
+    input.dataset.ageValid = 'false';
+  } else if (age > 65) {
+    hint.innerHTML = `⚠️ Age <strong>${age}</strong> — donors above 65 require medical clearance`;
+    hint.style.color = 'var(--yellow)';
+    input.style.borderColor = 'var(--yellow)';
+    input.dataset.ageValid = 'warn';
+  } else {
+    hint.innerHTML = `✅ Age <strong>${age}</strong> — eligible to donate`;
+    hint.style.color = 'var(--green)';
+    input.style.borderColor = 'var(--green)';
+    input.dataset.ageValid = 'true';
+  }
+}
+
+// ── GEOCODING / GPS ───────────────────────────────────────────
+function setLocationStatus(msg, type) {
+  const el = document.getElementById('locationStatus');
+  if (!el) return;
+  const colors = { ok: 'var(--green)', err: '#FF7A7F', info: 'var(--muted2)', loading: 'var(--yellow)' };
+  el.style.color = colors[type] || colors.info;
+  el.textContent = msg;
+}
+
+function resetLocationStatus() {
+  // Only reset if coordinates were already captured — warns user they may be stale
+  // (not called from acSelect path, which immediately re-geocodes)
+  const lat = document.getElementById('dLat');
+  const lng = document.getElementById('dLng');
+  if (lat && lng && lat.value) {
+    lat.value = '';
+    lng.value = '';
+    setLocationStatus('⚠️ City changed — re-run GPS or Lookup to update coordinates', 'info');
+  }
+}
+
+async function useGPS() {
+  const btn = document.getElementById('gpsBtn');
+  if (!navigator.geolocation) {
+    setLocationStatus('❌ Geolocation not supported by this browser', 'err');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = '⏳ Locating…';
+  setLocationStatus('Requesting GPS permission…', 'loading');
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const lat = pos.coords.latitude.toFixed(6);
+      const lng = pos.coords.longitude.toFixed(6);
+      document.getElementById('dLat').value = lat;
+      document.getElementById('dLng').value = lng;
+      // Reverse geocode to fill city if empty
+      const cityEl = document.getElementById('dCity');
+      if (!cityEl.value.trim()) {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+          const data = await res.json();
+          const addr = data.address || {};
+          const city = addr.suburb || addr.city_district || addr.city || addr.town || addr.village || '';
+          if (city) { cityEl.value = city + (addr.city && addr.city !== city ? ', ' + addr.city : ''); }
+        } catch(e) {}
+      }
+      setLocationStatus(`✅ GPS captured — ${lat}, ${lng} (±${Math.round(pos.coords.accuracy)}m accuracy)`, 'ok');
+      btn.disabled = false;
+      btn.textContent = '📡 GPS';
+    },
+    (err) => {
+      const msgs = { 1:'Permission denied — please allow location access', 2:'Position unavailable', 3:'Request timed out' };
+      setLocationStatus('❌ ' + (msgs[err.code] || 'GPS error'), 'err');
+      btn.disabled = false;
+      btn.textContent = '📡 GPS';
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+  );
+}
+
+async function geocodeCity() {
+  const city = document.getElementById('dCity').value.trim();
+  const btn  = document.getElementById('geocodeBtn');
+  if (!city) { setLocationStatus('⚠️ Enter a city or area first', 'err'); return; }
+  btn.disabled = true;
+  btn.textContent = '⏳…';
+  setLocationStatus('Looking up coordinates…', 'loading');
+  try {
+    // Append Bengaluru/India context if not already present for better accuracy
+    const query = /bengaluru|bangalore|karnataka|india/i.test(city) ? city : city + ', Bengaluru, India';
+    const res  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+    const data = await res.json();
+    if (!data.length) throw new Error('Not found');
+    const lat = parseFloat(data[0].lat).toFixed(6);
+    const lng = parseFloat(data[0].lon).toFixed(6);
+    document.getElementById('dLat').value = lat;
+    document.getElementById('dLng').value = lng;
+    setLocationStatus(`✅ Location found — ${lat}, ${lng} (${data[0].display_name.split(',').slice(0,2).join(',')})`, 'ok');
+  } catch(e) {
+    setLocationStatus('❌ Could not geocode — try a more specific address', 'err');
+  }
+  btn.disabled = false;
+  btn.textContent = '🔍 Lookup';
+}
+
+async function addDonor() {
+  const name   = document.getElementById('dName').value.trim();
+  const blood  = document.getElementById('dBlood').value;
+  const phone  = document.getElementById('dPhone').value.trim();
+  const city   = document.getElementById('dCity').value.trim();
+  const gender = document.getElementById('dGender').value;
+  const dob    = document.getElementById('dDob')?.value || '2000-01-01';
+  const org    = document.getElementById('dOrg')?.value.trim() || '';
+  const lat    = document.getElementById('dLat')?.value || null;
+  const lng    = document.getElementById('dLng')?.value || null;
+  if (!name||!blood) { toast('⚠️ Fill in name and blood group'); return; }
+
+  // Phone validation gate
+  const phoneVal = document.getElementById('dPhone').value;
+  if (phoneVal && !/^[6-9]\d{9}$/.test(phoneVal)) {
+    toast('⚠️ Enter a valid 10-digit Indian mobile number'); return;
+  }
+
+  // Age eligibility gate
+  const dobEl = document.getElementById('dDob');
+  if (dobEl && dobEl.value) {
+    if (dobEl.dataset.ageValid === 'false') {
+      toast('🚫 Donor does not meet age eligibility (18–65 years)'); return;
+    }
+    if (dobEl.dataset.ageValid === 'warn') {
+      const ok = confirm(`⚠️ Donor is ${dobEl.dataset.age} years old — above 65 requires medical clearance.\n\nRegister anyway?`);
+      if (!ok) return;
+    }
+  }
+  if (!lat || !lng) {
+    const proceed = confirm('📍 No location captured yet.\n\nDonors without coordinates won\'t appear in radius-based emergency alert matching.\n\nContinue anyway?');
+    if (!proceed) return;
+  }
+  // Build the new donor object
+  const newDonor = {
+    name, blood_type: blood, phone, city, gender, dob,
+    organization: org,
+    latitude:  lat ? parseFloat(lat) : null,
+    longitude: lng ? parseFloat(lng) : null,
+    total_donations: 0, badge_level: 'None', is_eligible: true,
+    _local: true // flag: not yet persisted to DB
+  };
+
+  // Save to backend
+  let savedToDb = false;
+  try {
+    const result = await api('/donors', {method:'POST', body:JSON.stringify({
+      name, blood_group: blood, phone, city, gender, dob,
+      organization: org,
+      latitude:  lat ? parseFloat(lat) : null,
+      longitude: lng ? parseFloat(lng) : null,
+    })});
+    // Backend returns {"error":...} with 200 on failure — check explicitly
+    if (result && result.error) {
+      toast('❌ Backend error: ' + result.error);
+      return;
+    }
+    savedToDb = true;
+    localDonors = null; // invalidate cache so loadDonors re-fetches fresh
+  } catch(e) {
+    // Backend offline — add locally so UI reflects it immediately
+    if (!localDonors) localDonors = [...SAMPLE_DONORS];
+    localDonors.push(newDonor);
+  }
+
+  toast(savedToDb ? '✅ Donor registered & saved to database!' : '✅ Donor added locally (backend offline)');
+
+  // Clear all form fields
+  ['dName','dPhone','dCity','dOrg','dLat','dLng','dDob'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){ el.value=''; el.style.borderColor=''; delete el.dataset.ageValid; delete el.dataset.age; }
+  });
+  // Clear all hint/status messages
+  ['locationStatus','phoneHint','dobHint'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.textContent='';
+  });
+  // Reset blood & gender selects
+  const bl=document.getElementById('dBlood'); if(bl) bl.value='';
+  const gd=document.getElementById('dGender'); if(gd) gd.value='Male';
+  loadDashboard(); loadDonors(); drawBadgeChart();
+}
+
+// ── REQUESTS ──────────────────────────────────────────────────
+async function loadRequests() {
+  const div=document.getElementById('requestsList'); if(!div) return;
+  let data=SAMPLE_REQUESTS;
+  try{ const r=await api('/requests'); if(r.length) data=r; }catch(e){}
+  div.innerHTML=data.map(r=>{
+    const u=r.urgency||r.urgency_level||'Normal';
+    const isPending=(r.status||'Pending')==='Pending';
+    const isApproved=r.status==='Approved';
+    const rid=r.request_id||r.id||0;
+    const spill=r.status==='Approved'?'pill-green':r.status==='Rejected'?'pill-red':r.status==='Fulfilled'?'pill-blue':'pill-yellow';
+    return `<div class="alert-row" style="flex-wrap:wrap;gap:8px">
+      <div class="alert-dot ${u}"></div>
+      <div class="alert-info" style="flex:1;min-width:160px">
+        <div class="alert-type">${r.blood_group||r.blood_type||'?'} Blood${r.hospital?' — '+r.hospital:''}</div>
+        <div class="alert-meta">${u} · ${r.units||r.units_needed||0} units</div>
+      </div>
+      ${isPending
+        ?`<div style="display:flex;gap:6px">
+            <button class="btn btn-green btn-sm" onclick="approveRequest(${rid})">✅ Approve</button>
+            <button class="btn btn-secondary btn-sm" onclick="rejectRequest(${rid})">❌ Reject</button>
+          </div>`
+        :isApproved
+        ?`<div style="display:flex;gap:6px;align-items:center">
+            <span class="pill pill-green">Approved</span>
+            <button class="btn btn-primary btn-sm" onclick="fulfillRequest(${rid})">🚚 Fulfill</button>
+          </div>`
+        :`<span class="pill ${spill}">${r.status||'Pending'}</span>`
+      }
+    </div>`;
+  }).join('');
+}
+
+async function createRequest() {
+  const blood=document.getElementById('reqBlood').value;
+  const units=document.getElementById('reqUnits').value;
+  const urgency=document.getElementById('reqUrgency').value;
+  if (!blood||!units){ toast('⚠️ Fill blood group and units'); return; }
+  try {
+    await api('/requests',{method:'POST',body:JSON.stringify({blood_type:blood,units_needed:parseFloat(units),urgency_level:urgency,status:'Pending'})});
+    toast('✅ Request submitted!'); loadRequests(); loadDashboard();
+  } catch(e){ toast('❌ Failed — is backend running?'); }
+}
+
+async function approveRequest(requestId) {
+  if (!requestId){ toast('⚠️ No request ID — connect backend'); return; }
+  try {
+    const res=await api(`/requests/${requestId}/approve`,{method:'POST'});
+    if (res.result==='Approved') toast('✅ Approved — stock deducted from inventory!');
+    else toast(`❌ ${res.message||'Insufficient stock'}`);
+    loadRequests(); loadDashboard(); loadInventory();
+  } catch(e){ toast('❌ Approval failed — is backend running?'); }
+}
+
+async function rejectRequest(requestId) {
+  if (!requestId){ toast('⚠️ No request ID'); return; }
+  try {
+    await api(`/requests/${requestId}/reject`,{method:'POST'});
+    toast('❌ Request rejected'); loadRequests(); loadDashboard();
+  } catch(e){ toast('❌ Failed — is backend running?'); }
+}
+
+async function fulfillRequest(requestId) {
+  if (!requestId){ toast('⚠️ No request ID'); return; }
+  try {
+    await api(`/requests/${requestId}/fulfill`,{method:'POST'});
+    toast('🚚 Request fulfilled — blood delivered!'); loadRequests(); loadDashboard();
+  } catch(e){ toast('❌ Failed — is backend running?'); }
+}
+
+// ── EMERGENCY ALERTS ──────────────────────────────────────────
+async function loadAlerts() {
+  const div=document.getElementById('activeAlerts'); if(!div) return;
+  let active=SAMPLE_ALERTS;
+  try{ const r=await api('/alerts'); if(r.length) active=r.filter(a=>a.status==='Active'); }catch(e){}
+  if (!active.length){ div.innerHTML='<div class="card"><div class="empty-state"><div class="es-icon">✅</div>No active emergency alerts</div></div>'; return; }
+  div.innerHTML=active.map(a=>{
+    const deadline=a.golden_hour_deadline?new Date(a.golden_hour_deadline):null;
+    return `<div class="golden-alert">
+      <div class="golden-top">
+        <div>
+          <div class="golden-title">🩸 ${a.blood_type||a.blood_type_needed||'?'} Blood Urgently Needed — ${a.units_needed||'?'} units</div>
+          <div class="golden-msg">${a.message||'Emergency blood required.'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px">📍 ${a.blood_bank_name||'Blood Bank'} · 👥 ${a.response_count||0} responded</div>
+        </div>
+        <div class="golden-badge">🚨 GOLDEN HOUR</div>
+      </div>
+      ${deadline?`<div class="countdown-wrap">
+        <div class="countdown-timer" data-deadline="${deadline.toISOString()}" id="cd-${a.alert_id}">
+          <div class="countdown-seg"><div class="countdown-num" data-part="h">--</div><div class="countdown-lbl">hrs</div></div>
+          <div class="countdown-sep">:</div>
+          <div class="countdown-seg"><div class="countdown-num" data-part="m">--</div><div class="countdown-lbl">min</div></div>
+          <div class="countdown-sep">:</div>
+          <div class="countdown-seg"><div class="countdown-num" data-part="s">--</div><div class="countdown-lbl">sec</div></div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+          <span class="pill pill-red">Radius: ${a.radius_km||10}km</span>
+          <button class="btn btn-green btn-sm" onclick="respondAlert(${a.alert_id},'Accepted')">✅ Accept</button>
+          <button class="btn btn-secondary btn-sm" onclick="resolveAlert(${a.alert_id})">Resolve</button>
+        </div>
+      </div>`:''}
+    </div>`;
+  }).join('');
+  startCountdowns();
+}
+
+function startCountdowns() {
+  if (countdownInterval) clearInterval(countdownInterval);
+  countdownInterval=setInterval(()=>{
+    document.querySelectorAll('.countdown-timer[data-deadline]').forEach(el=>{
+      const diff=Math.max(0,new Date(el.getAttribute('data-deadline'))-new Date());
+      el.querySelector('[data-part="h"]').textContent=String(Math.floor(diff/3600000)).padStart(2,'0');
+      el.querySelector('[data-part="m"]').textContent=String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
+      el.querySelector('[data-part="s"]').textContent=String(Math.floor((diff%60000)/1000)).padStart(2,'0');
+    });
+  },1000);
+}
+
+async function respondAlert(alertId, outcome) {
+  try{ await api(`/alerts/${alertId}/respond`,{method:'POST',body:JSON.stringify({donor_id:1,outcome})}); }catch(e){}
+  toast('✅ Response recorded!'); loadAlerts();
+}
+async function resolveAlert(alertId) {
+  try{ await api(`/alerts/${alertId}/resolve`,{method:'POST'}); }catch(e){}
+  toast('✅ Alert resolved'); loadAlerts(); loadDashboard();
+}
+async function createAlert() {
+  const blood=document.getElementById('alertBlood').value;
+  const units=document.getElementById('alertUnits').value;
+  const msg=document.getElementById('alertMsg').value.trim();
+  const radius=document.getElementById('alertRadius').value;
+  if (!blood||!units){ toast('⚠️ Fill blood type and units'); return; }
+  try {
+    await api('/alerts',{method:'POST',body:JSON.stringify({blood_type:blood,units_needed:parseFloat(units),message:msg,radius_km:parseFloat(radius||10),blood_bank_id:1})});
+    toast('🚨 Golden Hour alert broadcasted!'); loadAlerts(); loadDashboard();
+  } catch(e){ toast('❌ Failed — is backend running?'); }
+}
+
+// ── ELIGIBILITY ───────────────────────────────────────────────
+function toggleCheck(btn, field, val) {
+  checkState[field]=val;
+  btn.closest('.toggle-wrap').querySelectorAll('.toggle-opt').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+async function runEligibility() {
+  const hemo=parseFloat(document.getElementById('elgHemo').value);
+  const weight=parseFloat(document.getElementById('elgWeight').value);
+  const bp=document.getElementById('elgBP').value;
+  const gender=document.getElementById('elgGender').value;
+  const donorId=document.getElementById('elgDonorId').value;
+  let fails=[];
+  if (!weight||weight<45) fails.push('Weight below 45 kg');
+  if (!hemo) fails.push('Hemoglobin not entered');
+  else if (gender==='Female'&&hemo<12.5) fails.push('Hemoglobin below 12.5 g/dL (female threshold)');
+  else if (gender!=='Female'&&hemo<13.0) fails.push('Hemoglobin below 13.0 g/dL (male threshold)');
+  if (checkState.tattoo)  fails.push('Recent tattoo/piercing in last 6 months');
+  if (checkState.malaria) fails.push('Travelled to malaria zone in last 12 months');
+  if (checkState.med)     fails.push('Currently on medication');
+  if (checkState.ill)     fails.push('Recent illness or fever');
+  if (checkState.preg)    fails.push('Currently pregnant or nursing');
+  const passed=fails.length===0;
+  const box=document.getElementById('eligResult');
+  box.className='result-box '+(passed?'pass':'fail'); box.style.display='block';
+  document.getElementById('eligIcon').textContent=passed?'✅':'❌';
+  document.getElementById('eligTitle').textContent=passed?'Donor is Eligible':'Donor is Not Eligible';
+  document.getElementById('eligReason').innerHTML=passed?'All health criteria passed. Donor can proceed to donate.':'<strong>Reasons:</strong><br>'+fails.map(f=>'• '+f).join('<br>');
+  if (donorId) {
+    try {
+      await api(`/eligibility/check/${donorId}`,{method:'POST',body:JSON.stringify({hemoglobin:hemo,weight_kg:weight,blood_pressure:bp,recent_tattoo:checkState.tattoo,recent_travel_malaria:checkState.malaria,on_medication:checkState.med,recent_illness:checkState.ill,pregnant_or_nursing:checkState.preg})});
+      toast(passed?'✅ Eligible — saved to DB!':'❌ Not eligible — saved to DB');
+    } catch(e){ toast(passed?'✅ Eligible!':'❌ Not eligible'); }
+  } else toast(passed?'✅ Eligible!':'❌ Not eligible');
+}
+function resetEligibility() {
+  checkState={tattoo:false,malaria:false,med:false,ill:false,preg:false};
+  document.querySelectorAll('.toggle-opt').forEach(b=>{ b.classList.remove('selected'); if(b.classList.contains('no')) b.classList.add('selected'); });
+  document.getElementById('eligResult').style.display='none';
+  ['elgDonorId','elgHemo','elgWeight','elgBP'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+}
+
+// ── FIND COMPATIBLE DONORS ────────────────────────────────────
+async function findDonors() {
+  const blood=document.getElementById('compBlood').value;
+  const city=document.getElementById('compCity').value.trim();
+  if (!blood){ toast('⚠️ Select a blood type'); return; }
+  const div=document.getElementById('compatResult'); if(!div) return;
+  div.innerHTML='<div style="color:var(--muted);padding:16px 0;font-size:13px">Searching database...</div>';
+  const COMPAT={'O+':['O+','O-'],'O-':['O-'],'A+':['A+','A-','O+','O-'],'A-':['A-','O-'],'B+':['B+','B-','O+','O-'],'B-':['B-','O-'],'AB+':['A+','A-','B+','B-','O+','O-','AB+','AB-'],'AB-':['A-','B-','O-','AB-']};
+  let data=[];
+  try { data=await api(`/donors/compatible/${encodeURIComponent(blood)}`+(city?`?city=${encodeURIComponent(city)}`:''));} catch(e){}
+  if (!data.length) data=SAMPLE_DONORS.filter(d=>d.is_eligible&&(COMPAT[blood]||[]).includes(d.blood_type)&&(!city||d.city.toLowerCase().includes(city.toLowerCase())));
+  if (!data.length){ div.innerHTML='<div class="empty-state"><div class="es-icon">😔</div>No compatible eligible donors found</div>'; return; }
+  div.innerHTML=`<div style="font-size:12px;color:var(--muted);margin:12px 0">${data.length} compatible donor(s) found</div>`+
+    data.map(d=>`<div class="donor-row"><div class="donor-avatar">🧑</div>
+      <div><div class="donor-name">${d.name}</div><div class="donor-meta">${d.blood_type} · ${d.city||'—'} · ${d.phone||'—'}</div></div>
+      <span class="bt ${btClass(d.blood_type)}">${d.blood_type}</span></div>`).join('');
+}
+
+// ── CAMPS ─────────────────────────────────────────────────────
+async function loadCamps() {
+  const div=document.getElementById('campsList'); if(!div) return;
+  div.innerHTML='<div style="color:var(--muted);padding:20px;font-size:13px">Loading camps...</div>';
+  let data=SAMPLE_CAMPS;
+  try{ const r=await api('/camps'); if(Array.isArray(r)&&r.length) data=r; }catch(e){}
+  const icons={College:'🎓',NGO:'💚',Corporate:'🏢',Hospital:'🏥',Other:'📍'};
+  div.innerHTML=data.map(c=>{
+    const pct=c.expected_donors?Math.round(((c.actual_donors||0)/c.expected_donors)*100):0;
+    const sp=c.status==='Upcoming'?'pill-blue':c.status==='Ongoing'?'pill-green':c.status==='Completed'?'pill-muted':'pill-red';
+    const campDate=c.camp_date?String(c.camp_date).slice(0,10):'—';
+    const startT=c.start_time?String(c.start_time).slice(0,5):'09:00';
+    const endT=c.end_time?String(c.end_time).slice(0,5):'17:00';
+    return '<div class="camp-card">'+
+      '<div class="camp-org">'+
+        '<div class="camp-org-icon">'+(icons[c.organizer_type]||'📍')+'</div>'+
+        '<div><div class="camp-org-name">'+(c.organizer_name||'')+'</div><div class="camp-org-type">'+(c.organizer_type||'Organizer')+'</div></div>'+
+        '<span class="pill '+sp+'" style="margin-left:auto">'+(c.status||'Upcoming')+'</span>'+
+      '</div>'+
+      '<div class="camp-meta">'+
+        '<div class="camp-chip">📅 '+campDate+'</div>'+
+        '<div class="camp-chip">🕘 '+startT+' – '+endT+'</div>'+
+        (c.city?'<div class="camp-chip">📍 '+c.city+'</div>':'')+
+      '</div>'+
+      '<div style="font-size:12.5px;color:var(--muted2);margin-bottom:10px">📌 '+(c.location||'')+'</div>'+
+      ((c.actual_donors||0)>0
+        ?'<div class="camp-progress"><div class="camp-prog-label"><span>Turnout</span><span>'+(c.actual_donors||0)+'/'+(c.expected_donors||0)+'</span></div><div class="bar-bg" style="height:7px"><div class="bar-fill bar-green" style="width:'+pct+'%"></div></div></div>'
+        :'<div style="font-size:12px;color:var(--muted);margin-bottom:12px">Expected: '+(c.expected_donors||0)+' donors</div>')+
+      '<div style="display:flex;gap:8px;margin-top:4px">'+
+        '<button class="btn btn-secondary btn-sm" onclick="registerCamp('+(c.camp_id||0)+')">📝 Register</button>'+
+        (c.status==='Ongoing'?'<button class="btn btn-green btn-sm" onclick="markAllAttended('+(c.camp_id||0)+')">✅ Mark Attended</button>':'')+
+        (c.status!=='Completed'?'<button class="btn btn-primary btn-sm" onclick="completeCamp('+(c.camp_id||0)+')">🏁 Complete</button>':'')+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+async function scheduleCamp() {
+  const org=document.getElementById('campOrg').value.trim();
+  const type=document.getElementById('campType').value;
+  const loc=document.getElementById('campLoc').value.trim();
+  const date=document.getElementById('campDate').value;
+  const exp=document.getElementById('campExpected').value;
+  const start=document.getElementById('campStart').value;
+  const end=document.getElementById('campEnd').value;
+  if (!org||!loc||!date){ toast('⚠️ Fill organizer, location and date'); return; }
+  try {
+    await api('/camps',{method:'POST',body:JSON.stringify({organizer_name:org,organizer_type:type,location:loc,camp_date:date,start_time:start,end_time:end,expected_donors:parseInt(exp)||0,blood_bank_id:1})});
+    toast('✅ Camp scheduled!');
+    ['campOrg','campLoc','campDate','campExpected'].forEach(id=>document.getElementById(id).value='');
+    loadCamps();
+  } catch(e){ toast('❌ Failed — is backend running?'); }
+}
+async function registerCamp(campId) {
+  try{ await api(`/camps/${campId}/register/1`,{method:'POST'}); }catch(e){}
+  toast(`✅ Registered for camp #${campId}!`);
+}
+async function markAllAttended(campId) {
+  try{ await api(`/camps/${campId}/attend-all`,{method:'POST'}); toast('✅ All donors marked as attended!'); loadCamps(); }
+  catch(e){ toast('❌ Failed'); }
+}
+async function completeCamp(campId) {
+  const actual=prompt('How many donors actually attended?');
+  if (actual===null) return;
+  const units=prompt('How many units of blood were collected?');
+  if (units===null) return;
+  try{
+    await api(`/camps/${campId}/complete`,{method:'POST',body:JSON.stringify({actual_donors:parseInt(actual)||0,collected_units:parseFloat(units)||0})});
+    toast('✅ Camp marked complete — '+actual+' donors, '+units+' units collected');
+    loadCamps();
+  } catch(e){ toast('❌ Failed'); }
+}
+
+// ── LEADERBOARD ───────────────────────────────────────────────
+async function loadLeaderboard() {
+  const div=document.getElementById('leaderList'); if(!div) return;
+  div.innerHTML='<div style="color:var(--muted);padding:16px 0;font-size:13px">Loading...</div>';
+  let data=SAMPLE_LEADERBOARD;
+  try{ const r=await api('/dashboard/leaderboard'); if(r.length) data=r; }catch(e){}
+  const medals=['🥇','🥈','🥉'];
+  div.innerHTML=data.map((d,i)=>{
+    const rc=i<3?`rank-${i+1}`:'';
+    const bi=d.badge_level==='Platinum'?'💎':d.badge_level==='Gold'?'🥇':d.badge_level==='Silver'?'🥈':d.badge_level==='Bronze'?'🥉':'';
+    return `<div class="leader-row">
+      <div class="rank-num ${rc}">${i<3?medals[i]:d.rank_overall||i+1}</div>
+      <div class="leader-avatar">${i<3?medals[i]:'🧑'}</div>
+      <div><div class="leader-name">${d.name}</div>
+      <div class="leader-meta">${d.blood_type} · ${d.city||'—'} · ${d.total_donations} donations ${bi}</div></div>
+      <div class="leader-pts">${d.total_points} pts</div>
+    </div>`;
+  }).join('');
+}
+
+// ── AI FORECAST ───────────────────────────────────────────────
+async function loadForecast() {
+  let data=SAMPLE_FORECAST;
+  try{ const r=await api('/dashboard/forecast'); if(r.length) data=r; }catch(e){}
+  renderForecast(data);
+
+}
+
+function renderForecast(data) {
+  const ctx=document.getElementById('forecastChart');
+  if (ctx) {
+    if (forecastChart) forecastChart.destroy();
+    forecastChart=new Chart(ctx,{type:'bar',data:{labels:data.map(d=>d.blood_type),datasets:[{label:'Predicted Units',data:data.map(d=>d.predicted_units),
+      backgroundColor:data.map(d=>d.shortage_risk==='Critical'?'rgba(232,54,61,.7)':d.shortage_risk==='High'?'rgba(245,200,66,.7)':'rgba(0,214,143,.7)'),borderRadius:10,borderSkipped:false}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#6B7FA3'}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#6B7FA3'}}}}});
+  }
+  const fl=document.getElementById('forecastList');
+  if (fl) fl.innerHTML=data.map(d=>`<div class="forecast-item"><div class="forecast-icon">🩸</div>
+    <div class="forecast-info"><div class="forecast-type"><span class="bt ${btClass(d.blood_type)}">${d.blood_type}</span></div>
+    <div class="forecast-detail">Confidence: ${d.confidence_pct}%</div></div>
+    <div><div class="forecast-val">${d.predicted_units}u</div><div class="forecast-conf">${d.shortage_risk} risk</div></div></div>`).join('');
+  const shorts=data.filter(d=>d.shortage_risk==='Critical'||d.shortage_risk==='High');
+  const sl=document.getElementById('shortageList');
+  if (sl) sl.innerHTML=shorts.length?shorts.map(d=>`<div class="forecast-item">
+    <div class="forecast-icon">${d.shortage_risk==='Critical'?'🔴':'🟡'}</div>
+    <div class="forecast-info"><div class="forecast-type"><span class="bt ${btClass(d.blood_type)}">${d.blood_type}</span> — ${d.shortage_risk}</div>
+    <div class="forecast-detail">Predicted demand: ${d.predicted_units} units next month</div></div>
+    <span class="pill ${d.shortage_risk==='Critical'?'pill-red':'pill-yellow'}">${d.shortage_risk}</span></div>`).join('')
+    :'<div class="empty-state"><div class="es-icon">✅</div>No critical shortages predicted</div>';
+}
+
+
+// ── BLOOD BANKS ───────────────────────────────────────────────
+async function loadBanks() {
+  const grid=document.getElementById('banksGrid'); if(!grid) return;
+  const BANKS=[
+    {name:"Victoria Hospital BB",  address:"K.R. Road, Fort",             stocks:{"O+":620,"A+":480,"B+":390,"AB+":210,"O-":85,"A-":70,"B-":55,"AB-":20}},
+    {name:"St. John's Medical BB", address:"Sarjapur Road, Koramangala",  stocks:{"O+":540,"A+":410,"B+":320,"AB+":180,"O-":65,"A-":55,"B-":40,"AB-":15}},
+    {name:"Manipal Hospital BB",   address:"HAL Airport Road",            stocks:{"O+":710,"A+":500,"B+":430,"AB+":240,"O-":90,"A-":80,"B-":60,"AB-":25}},
+    {name:"Apollo Hospital BB",    address:"Bannerghatta Road",           stocks:{"O+":580,"A+":440,"B+":360,"AB+":200,"O-":75,"A-":65,"B-":50,"AB-":18}},
+    {name:"Narayana Health BB",    address:"Bommasandra Industrial Area", stocks:{"O+":450,"A+":370,"B+":280,"AB+":150,"O-":50,"A-":45,"B-":35,"AB-":10}},
+    {name:"Fortis Hospital BB",    address:"Bannerghatta, Banashankari",  stocks:{"O+":490,"A+":380,"B+":300,"AB+":165,"O-":60,"A-":52,"B-":42,"AB-":14}},
+    {name:"Kidwai Memorial BB",    address:"Dr. M.H. Marigowda Road",     stocks:{"O+":330,"A+":260,"B+":200,"AB+":120,"O-":40,"A-":35,"B-":25,"AB-":8}},
+    {name:"NIMHANS Blood Bank",    address:"Hosur Road, Lakkasandra",     stocks:{"O+":290,"A+":220,"B+":170,"AB+":95, "O-":35,"A-":30,"B-":22,"AB-":7}},
+  ];
+  grid.innerHTML=BANKS.map(b=>{
+    const stockHtml=Object.entries(b.stocks).map(([bt,u])=>{
+      const color=u>300?'var(--green)':u>100?'var(--yellow)':'var(--red)';
+      return `<div class="mini-stock"><span class="bt-l" style="color:${color}">${bt}</span><span class="u-l">${u}</span></div>`;
+    }).join('');
+    return `<div class="bank-card"><div class="bank-name">🏥 ${b.name}</div><div class="bank-addr">📍 ${b.address}</div><div class="bank-stocks">${stockHtml}</div></div>`;
+  }).join('');
+}
+
+// ── EXPIRY TRACKER ────────────────────────────────────────────
+async function loadExpiry() {
+  const tbody=document.getElementById('expiryBody'); if(!tbody) return;
+  let data=SAMPLE_EXPIRY;
+  try{ const r=await api('/inventory/expiring'); if(r.length) data=r; }catch(e){}
+  tbody.innerHTML=data.map(r=>{
+    const days=r.days_until_expiry??r.days??0;
+    const dc=days<=3?'expiry-days-crit':days<=7?'expiry-days-warn':'expiry-days-ok';
+    return `<tr><td style="font-weight:500">${r.blood_bank||'—'}</td>
+      <td><span class="bt ${btClass(r.blood_type)}">${r.blood_type}</span></td>
+      <td style="font-family:var(--font);font-weight:600">${r.units_available||r.units||0} units</td>
+      <td style="color:var(--muted2)">${r.expiry_date}</td>
+      <td><span class="${dc}">${days} days left</span></td>
+      <td><button class="btn btn-secondary btn-sm" onclick="toast('🔄 Redistribution suggested!')">🔄 Redistribute</button></td></tr>`;
+  }).join('');
+}
+
+// ── LIVE MAP ──────────────────────────────────────────────────
+let leafletMap=null;
+const MAP_BANKS=[
+  {name:"Victoria Hospital BB",   lat:12.9605,lng:77.5754,stocks:{"O+":620,"A+":480,"B+":390,"O-":85,"AB-":20}},
+  {name:"St. John's Medical BB",  lat:12.9259,lng:77.6229,stocks:{"O+":540,"A+":410,"B-":40,"AB-":15,"O-":65}},
+  {name:"Manipal Hospital BB",    lat:12.9591,lng:77.6491,stocks:{"O+":710,"A+":500,"B+":430,"AB+":240,"O-":90}},
+  {name:"Narayana Health BB",     lat:12.8110,lng:77.6869,stocks:{"O+":450,"B+":280,"AB+":150,"O-":50,"B-":35}},
+  {name:"Kidwai Memorial BB",     lat:12.9288,lng:77.5975,stocks:{"O+":330,"A+":260,"B-":25,"AB-":8,"O-":40}},
+  {name:"Apollo Hospital BB",     lat:12.8987,lng:77.5967,stocks:{"O+":580,"A+":440,"B+":360,"AB+":200,"O-":75}},
+  {name:"NIMHANS Blood Bank",     lat:12.9394,lng:77.5960,stocks:{"O+":290,"A+":220,"O-":35,"B-":22,"AB-":7}},
+  {name:"Fortis Hospital BB",     lat:12.8951,lng:77.5975,stocks:{"O+":490,"A+":380,"B+":300,"AB+":165,"O-":60}},
+];
+function getMapColor(s){const avg=Object.values(s).reduce((a,b)=>a+b,0)/Object.keys(s).length;return avg>300?'#00D68F':avg>100?'#F5C842':'#E8363D';}
+function loadMap() {
+  setTimeout(()=>{
+    if (!leafletMap) {
+      leafletMap=L.map('bankMap',{center:[12.9352,77.6245],zoom:12});
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',className:'map-tiles'}).addTo(leafletMap);
+    } else { leafletMap.eachLayer(l=>{if(l instanceof L.Marker) leafletMap.removeLayer(l);}); }
+    setTimeout(()=>leafletMap.invalidateSize(),100);
+    MAP_BANKS.forEach(bank=>{
+      const color=getMapColor(bank.stocks);
+      const icon=L.divIcon({className:'',html:`<div style="width:18px;height:18px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 0 12px ${color};"></div>`,iconSize:[18,18],iconAnchor:[9,9]});
+      const stockHtml=Object.entries(bank.stocks).slice(0,5).map(([bt,u])=>{const c=u>300?'#00D68F':u>100?'#F5C842':'#E8363D';return`<span class="bank-popup-bt" style="background:${c}22;color:${c}">${bt}: ${u}</span>`;}).join('');
+      L.marker([bank.lat,bank.lng],{icon}).addTo(leafletMap).bindPopup(`<div class="bank-popup"><h4>🏥 ${bank.name}</h4><div class="bank-popup-stock">${stockHtml}</div></div>`);
+    });
+    const cards=document.getElementById('mapBankCards');
+    if (cards) cards.innerHTML=MAP_BANKS.map(b=>{const color=getMapColor(b.stocks);const total=Object.values(b.stocks).reduce((a,c)=>a+c,0);return`<div class="bank-card" style="border-top:2px solid ${color}"><div class="bank-name" style="color:${color}">🏥 ${b.name}</div><div class="bank-addr">📍 Total: ${total} units</div><div class="bank-stocks">${Object.entries(b.stocks).map(([bt,u])=>`<div class="mini-stock"><span class="bt-l">${bt}</span><span class="u-l">${u}</span></div>`).join('')}</div></div>`;}).join('');
+  },100);
+}
+
+// ── TICKER ────────────────────────────────────────────────────
+async function updateTicker() {
+  const items=[
+    '🩸 O- blood critically low at NIMHANS Blood Bank — 7 units remaining',
+    '🚨 Golden Hour alert active — Apollo Hospital needs AB- immediately',
+    '✅ IIM Bangalore donation camp on May 15 — 100 donors expected',
+    '📊 AI forecast: O+ demand predicted to rise 12% next month',
+    '🏆 Leaderboard updated — Arjun Mehta leads with 2350 points',
+    '🔄 Redistribution: 2 units A- from City BB → Apollo BB expiring in 4 days',
+    '💎 New Platinum donor: Arjun Mehta reached 20 donations!',
+  ];
+  try {
+    const [inv,alerts]=await Promise.all([api('/inventory'),api('/alerts')]);
+    const crit=inv.filter(i=>i.units<=100);
+    const active=alerts.filter(a=>a.status==='Active');
+    const live=[...crit.map(i=>`🩸 ${i.blood_group} critically low — ${i.units} units`),...active.map(a=>`🚨 Golden Hour: ${a.blood_type||a.blood_type_needed} needed`)];
+    if (live.length) { const ticker=document.getElementById('tickerInner'); if(ticker) ticker.innerHTML=[...live,...items].map(t=>`<span class="ticker-item">${t}</span>`).join(''); return; }
+  } catch(e){}
+  const ticker=document.getElementById('tickerInner');
+  if (ticker) ticker.innerHTML=items.map(t=>`<span class="ticker-item">${t}</span>`).join('');
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+async function loadAll() {
+  await checkApiStatus();
+  await loadDashboard();
+  await loadInventory();
+  await loadAlertsForDash();
+  await updateTicker();
+}
+
+loadAll();
+</script>
+<!-- ── DONATION MODAL ─────────────────────────────────── -->
+<div id="donationModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--navy2);border:1px solid var(--border);border-radius:16px;padding:28px 32px;width:420px;max-width:95vw;position:relative">
+    <button onclick="closeDonationModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted2);font-size:20px;cursor:pointer">✕</button>
+    <h3 style="margin:0 0 4px;color:var(--text)">💉 Record Donation</h3>
+    <div id="donationModalSub" style="color:var(--muted2);font-size:13px;margin-bottom:20px"></div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label class="form-label">Blood Bank</label>
+        <select class="form-input" id="donBloodBank">
+          <option value="1">City Blood Bank (Default)</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label">Donation Date</label>
+        <input class="form-input" id="donDate" type="date">
+      </div>
+      <div>
+        <label class="form-label">Units Donated</label>
+        <input class="form-input" id="donUnits" type="number" min="0.5" max="2" step="0.5" value="1">
+      </div>
+      <div>
+        <label class="form-label">Status</label>
+        <select class="form-input" id="donStatus">
+          <option value="Completed">Completed</option>
+          <option value="Pending">Pending</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+        <div style="font-size:11px;color:var(--muted2);margin-top:4px">⚡ Setting status to "Completed" will instantly update inventory, badge and leaderboard via database trigger</div>
+      </div>
+      <div>
+        <label class="form-label">Health Notes <span style="color:var(--muted2)">(optional)</span></label>
+        <input class="form-input" id="donNotes" placeholder="e.g. No adverse reactions">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:22px">
+      <button class="btn btn-primary" style="flex:1" onclick="submitDonation()">✅ Submit Donation</button>
+      <button class="btn btn-secondary" onclick="closeDonationModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
